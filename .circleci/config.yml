@@ -1,0 +1,113 @@
+version: 2.1
+
+parameters:
+  REPOSITORY:
+    type: string
+    default: "thales-markets/thales-sport-markets"
+  REF:
+    type: string
+    default: "main"
+  BUILD_DIR:
+    type: string
+    default: ""
+  PACKAGE_INSTALL_COMMAND:
+    type: string
+    default: "export NODE_OPTIONS=--openssl-legacy-provider && npm install"
+  BUILD_COMMAND:
+    type: string
+    default: "npm run build"
+  OUTPUT_DIR:
+    type: string
+    default: "build"
+  ONE_CLICK_SERVER_URL:
+    type: string
+    default: ""
+  # base64 encoded 
+  ENVIRONMENT_VARIABLES:
+    type: string
+    default: ""
+
+jobs:
+  publish:
+    docker:
+      - image: cimg/node:current
+    steps:
+      # decode environment variables and store in workspace
+      - run:
+          name: Decode environment variables
+          command: |
+            echo << pipeline.parameters.ENVIRONMENT_VARIABLES >> | base64 --decode > ~/project/.env
+            cat ~/project/.env
+
+      - run:
+          name: Print inputs (exclude sensitive secrets)
+          working_directory: ~/project/repository
+          command: |
+            source ~/project/.env
+            echo "Repository: << pipeline.parameters.REPOSITORY >>"
+            echo "Ref: << pipeline.parameters.REF >>"
+            echo "Build Directory: << pipeline.parameters.BUILD_DIR >>"
+            echo "Package Install Command: << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
+            echo "Build Command: << pipeline.parameters.BUILD_COMMAND >>"
+            echo "Output Directory: << pipeline.parameters.OUTPUT_DIR >>"
+            echo "Custom Environment Variables:" $DHEERAJ_WAS_HERE
+      - run:
+          name: Clone external repository
+          command: |
+            source ~/project/.env
+            git clone https://github.com/<< pipeline.parameters.REPOSITORY >>.git ~/project/repository
+            # Ensure the repository is checked out to the specific ref if not default
+            if [ "<< pipeline.parameters.REF >>" != "main" ]; then
+              cd ~/project/repository
+              git checkout << pipeline.parameters.REF >>
+            fi
+
+      - run:
+          name: Run build command
+          working_directory: ~/project/repository
+          command: |
+            source ~/project/.env
+            if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
+              cd "<< pipeline.parameters.BUILD_DIR >>"
+            fi
+            << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>
+            << pipeline.parameters.BUILD_COMMAND >>
+
+      - run:
+          name: Create armada release
+          working_directory: ~/project/repository
+          command: |
+            source ~/project/.env
+            bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle << pipeline.parameters.OUTPUT_DIR >>)"
+            checksum="$(npx --package=armada-cli@0.4.1 --yes armada bundle checksum $bundle_filename)"
+            echo $checksum > checksum
+            echo "Bundle Filename: $bundle_filename"
+            echo "Checksum: $checksum"
+        
+      # store artifacts in circleci for download
+      - store_artifacts:
+          path: ~/project/repository/armada-bundle.tgz
+      
+      - store_artifacts:
+          path: ~/project/repository/checksum
+      
+      - run:
+          name: Notify one click server of new release
+          command: |
+            BUNDLE_URL=https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz
+            PIPELINE_ID=<< pipeline.id >>
+            CHECKSUM=$(cat ~/project/repository/checksum)
+            echo "Bundle URL: $BUNDLE_URL"
+            echo "Pipeline ID: $PIPELINE_ID"
+            echo "Checksum: $CHECKSUM"
+
+            curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"checksum": "'"$CHECKSUM"'", "bundleUrl": "'"$BUNDLE_URL"'", "pipelineId": "'"$PIPELINE_ID"'"}' \
+            << pipeline.parameters.ONE_CLICK_SERVER_URL >>/circleci/notify
+
+workflows:
+  version: 2
+  build-and-publish:
+    jobs:
+      - publish
