@@ -68,12 +68,29 @@ jobs:
           name: Run build command
           working_directory: ~/project/repository
           command: |
+            set -e  # Ensure that the script fails if any command fails
             source ~/project/.env
+
+            # Navigate to the build directory if specified
             if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
+              echo "Changing to build directory: << pipeline.parameters.BUILD_DIR >>"
               cd "<< pipeline.parameters.BUILD_DIR >>"
+            else
+              echo "No build directory specified, staying in repository root."
             fi
-            "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-            "<< pipeline.parameters.BUILD_COMMAND >>"
+
+            # Run package install command if specified
+            if [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ]; then
+              echo "Running package install command..."
+              eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
+            else
+              echo "No package install command specified."
+            fi
+
+            # Run build command
+            echo "Running build command..."
+            eval "<< pipeline.parameters.BUILD_COMMAND >>"
+
       - run:
           name: Create armada release
           working_directory: ~/project/repository
