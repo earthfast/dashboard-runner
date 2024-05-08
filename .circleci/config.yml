@@ -96,7 +96,7 @@ jobs:
 
       - when:
           condition:
-            equal: ["s3", "<< pipeline.parameters.SOURCE_TYPE >>"]
+            equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
           steps:
             - run:
                 name: Download and Extract from S3
