@@ -38,6 +38,10 @@ jobs:
       - image: cimg/node:current
     steps:
       - run:
+          name: Install AWS CLI
+          command: |
+            sudo apt-get update && sudo apt-get install -y awscli
+      - run:
           name: Decode environment variables
           command: |
             echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" | base64 --decode > ~/project/.env
@@ -101,7 +105,6 @@ jobs:
             - run:
                 name: Download and Extract from S3
                 command: |
-                  sudo apt-get update && sudo apt-get install -y awscli
                   aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
                   aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
                   aws configure set default.region $AWS_REGION
