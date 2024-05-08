@@ -37,6 +37,7 @@ jobs:
     docker:
       - image: cimg/node:current
     steps:
+      # decode environment variables and store in workspace
       - run:
           name: Decode environment variables
           command: |
@@ -61,8 +62,15 @@ jobs:
             - run:
                 name: Download and Extract from S3
                 command: |
-                  curl "<< pipeline.parameters.S3_URL >>" -o package.zip
+                  sudo apt-get update && sudo apt-get install -y awscli
+                  aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                  aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                  aws configure set default.region $AWS_REGION
+
+                  S3_PATH="s3://$AWS_S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
+                  aws s3 cp $S3_PATH package.zip
                   unzip package.zip -d ~/project/repository
+
       - run:
           name: Run build command
           working_directory: ~/project/repository
