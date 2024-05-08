@@ -37,7 +37,6 @@ jobs:
     docker:
       - image: cimg/node:current
     steps:
-      # decode environment variables and store in workspace
       - run:
           name: Decode environment variables
           command: |
@@ -55,6 +54,32 @@ jobs:
                     cd ~/project/repository
                     git checkout "<< pipeline.parameters.REF >>"
                   fi
+            - run:
+                name: Run build command
+                working_directory: ~/project/repository
+                command: |
+                  set -e  # Ensure that the script fails if any command fails
+                  source ~/project/.env
+
+                  # Navigate to the build directory if specified
+                  if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
+                    echo "Changing to build directory: << pipeline.parameters.BUILD_DIR >>"
+                    cd "<< pipeline.parameters.BUILD_DIR >>"
+                  else
+                    echo "No build directory specified, staying in repository root."
+                  fi
+
+                  # Run package install command if specified
+                  if [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ]; then
+                    echo "Running package install command..."
+                    eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
+                  else
+                    echo "No package install command specified."
+                  fi
+
+                  # Run build command
+                  echo "Running build command..."
+                  eval "<< pipeline.parameters.BUILD_COMMAND >>"
       - when:
           condition:
             equal: ["s3", "<< pipeline.parameters.SOURCE_TYPE >>"]
@@ -72,46 +97,6 @@ jobs:
                   unzip package.zip -d ~/project/repository
 
       - run:
-          name: Run build command
-          working_directory: ~/project/repository
-          command: |
-            set -e  # Ensure that the script fails if any command fails
-            source ~/project/.env
-            echo "Environment variables after sourcing:"
-            env
-
-            # Log parameter values
-            echo "Source type: << pipeline.parameters.SOURCE_TYPE >>"
-            echo "S3 URL: << pipeline.parameters.S3_URL >>"
-            echo "Repository: << pipeline.parameters.REPOSITORY >>"
-            echo "Reference: << pipeline.parameters.REF >>"
-            echo "Build directory: << pipeline.parameters.BUILD_DIR >>"
-            echo "Package install command: << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-            echo "Build command: << pipeline.parameters.BUILD_COMMAND >>"
-            echo "Output directory: << pipeline.parameters.OUTPUT_DIR >>"
-            echo "One click server URL: << pipeline.parameters.ONE_CLICK_SERVER_URL >>"
-
-            # Navigate to the build directory if specified
-            if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
-              echo "Changing to build directory: << pipeline.parameters.BUILD_DIR >>"
-              cd "<< pipeline.parameters.BUILD_DIR >>"
-            else
-              echo "No build directory specified, staying in repository root."
-            fi
-
-            # Run package install command if specified
-            if [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ]; then
-              echo "Running package install command..."
-              eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-            else
-              echo "No package install command specified."
-            fi
-
-            # Run build command
-            echo "Running build command..."
-            eval "<< pipeline.parameters.BUILD_COMMAND >>"
-
-      - run:
           name: Create armada release
           working_directory: ~/project/repository
           command: |
@@ -120,7 +105,7 @@ jobs:
             echo $checksum > checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-        
+
       # store artifacts in circleci for download
       - store_artifacts:
           path: ~/project/repository/armada-bundle.tgz
@@ -133,7 +118,7 @@ jobs:
             PIPELINE_ID="<< pipeline.id >>"
             CHECKSUM=$(cat ~/project/repository/checksum)
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
-            
+
             echo "Bundle URL: $BUNDLE_URL"
             echo "Pipeline ID: $PIPELINE_ID"
             echo "Checksum: $CHECKSUM"
