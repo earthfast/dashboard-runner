@@ -80,6 +80,7 @@ jobs:
                   # Run build command
                   echo "Running build command..."
                   eval "<< pipeline.parameters.BUILD_COMMAND >>"
+
       - when:
           condition:
             equal: ["s3", "<< pipeline.parameters.SOURCE_TYPE >>"]
@@ -95,17 +96,18 @@ jobs:
                   S3_PATH="s3://$AWS_S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
                   aws s3 cp $S3_PATH package.zip
                   unzip package.zip -d ~/project/repository
+                  echo "Extracted to: ~/project/repository"
 
       - run:
           name: Create armada release
           working_directory: ~/project/repository
           command: |
-            bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle << pipeline.parameters.OUTPUT_DIR >>)"
+            bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle .)"
             checksum="$(npx --package=armada-cli@0.4.1 --yes armada bundle checksum $bundle_filename)"
             echo $checksum > checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-
+        
       # store artifacts in circleci for download
       - store_artifacts:
           path: ~/project/repository/armada-bundle.tgz
@@ -118,7 +120,7 @@ jobs:
             PIPELINE_ID="<< pipeline.id >>"
             CHECKSUM=$(cat ~/project/repository/checksum)
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
-
+            
             echo "Bundle URL: $BUNDLE_URL"
             echo "Pipeline ID: $PIPELINE_ID"
             echo "Checksum: $CHECKSUM"
