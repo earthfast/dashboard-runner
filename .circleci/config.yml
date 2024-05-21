@@ -18,7 +18,8 @@ parameters:
     default: ""
   PACKAGE_INSTALL_COMMAND:
     type: string
-    default: "export NODE_OPTIONS=--openssl-legacy-provider && npm install"
+    # default: "export NODE_OPTIONS=--openssl-legacy-provider && npm install"
+    default: ""
   BUILD_COMMAND:
     type: string
     default: "npm run build"
