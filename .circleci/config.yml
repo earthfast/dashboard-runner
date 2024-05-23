@@ -127,10 +127,11 @@ jobs:
             echo $checksum > checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
+            mv ~/project/repository/armada-bundle.tgz ~
         
       # store artifacts in circleci for download
       - store_artifacts:
-          path: ~/project/repository/armada-bundle.tgz
+          path: armada-bundle.tgz
       - store_artifacts:
           path: ~/project/repository/checksum
       - run:
