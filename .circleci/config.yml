@@ -132,7 +132,12 @@ jobs:
                   S3_PATH="s3://$S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
                   aws s3 cp $S3_PATH package.zip
                   unzip package.zip -d ~/project/repository
-                  echo "Extracted to: ~/project/repository"
+
+                  if [ $(ls -1q ~/project/repository/ | wc -l) -eq 1 ]; then
+                    extracted_folder=$(ls -d ~/project/repository/*/ | head -n 1)
+                    mv "$extracted_folder"* ~/project/repository/
+                    rmdir "$extracted_folder"
+                  fi
 
       - run:
           name: Create armada release
