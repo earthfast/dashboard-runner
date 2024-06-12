@@ -130,12 +130,12 @@ jobs:
                   fi
 
                   S3_PATH="s3://$S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
-                  aws s3 cp $S3_PATH package.zip
-                  unzip package.zip -d ~/project/repository
+                  aws s3 cp $S3_PATH /tmp/package.zip
+                  unzip /tmp/package.zip -d ~/project/repository
 
-                  if [ $(ls -1q ~/project/repository/ | wc -l) -eq 1 ]; then
-                    extracted_folder=$(ls -d ~/project/repository/*/ | head -n 1)
-                    mv "$extracted_folder"* ~/project/repository/
+                  if [ $(find ~/project/repository -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ] && [ $(find ~/project/repository -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]; then
+                    extracted_folder=$(find ~/project/repository -mindepth 1 -maxdepth 1 -type d)
+                    mv "$extracted_folder"/* ~/project/repository/
                     rmdir "$extracted_folder"
                   fi
 
