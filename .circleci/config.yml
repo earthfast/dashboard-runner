@@ -31,6 +31,10 @@ parameters:
   ENVIRONMENT_VARIABLES:
     type: string
     default: ""  # Base64 encoded
+  ENVIRONMENT:
+    type: string
+    default: "default"
+    enum: ["default", "development", "sepolia", "sepolia-staging"]
 
 jobs:
   publish:
@@ -59,6 +63,7 @@ jobs:
             echo "Build command: << pipeline.parameters.BUILD_COMMAND >>"
             echo "Output directory: << pipeline.parameters.OUTPUT_DIR >>"
             echo "One click server URL: << pipeline.parameters.ONE_CLICK_SERVER_URL >>"
+            echo "Environment: << pipeline.parameters.ENVIRONMENT >>"
 
       - when:
           condition:
@@ -113,7 +118,18 @@ jobs:
                   aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
                   aws configure set default.region $AWS_REGION
 
-                  S3_PATH="s3://$AWS_S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
+                  if [ "<< pipeline.parameters.ENVIRONMENT >>" == "development" ]; then
+                    S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_DEV
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "sepolia" ]; then
+                    S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "sepolia-staging" ]; then
+                    S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA_STAGING
+                  else
+                    echo "Invalid / default environment specified."
+                    exit 1
+                  fi
+
+                  S3_PATH="s3://$S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
                   aws s3 cp $S3_PATH package.zip
                   unzip package.zip -d ~/project/repository
                   echo "Extracted to: ~/project/repository"
