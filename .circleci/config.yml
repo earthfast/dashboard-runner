@@ -130,8 +130,7 @@ jobs:
                   fi
 
                   S3_PATH="s3://$S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
-                  aws s3 cp $S3_PATH /tmp/package.zip
-                  unzip /tmp/package.zip -d ~/project/repository
+                  aws s3 cp $S3_PATH ~/project/repository --recursive
 
                   if [ $(find ~/project/repository -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ] && [ $(find ~/project/repository -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]; then
                     extracted_folder=$(find ~/project/repository -mindepth 1 -maxdepth 1 -type d)
