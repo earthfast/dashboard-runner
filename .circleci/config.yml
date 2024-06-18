@@ -164,6 +164,7 @@ jobs:
           path: ~/project/repository/checksum
       - run:
           name: Notify one click server of the outcome
+          when: always
           command: |
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
             PIPELINE_ID="<< pipeline.id >>"
