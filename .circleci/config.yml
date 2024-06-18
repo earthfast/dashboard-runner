@@ -24,7 +24,7 @@ parameters:
     default: "npm run build"
   OUTPUT_DIR:
     type: string
-    default: "build"
+    default: ""
   ONE_CLICK_SERVER_URL:
     type: string
     default: ""
@@ -142,13 +142,21 @@ jobs:
           name: Create armada release
           working_directory: ~/project/repository
           command: |
+            # Navigate to the build directory if specified
+            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+              echo "Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
+              cd "<< pipeline.parameters.OUTPUT_DIR >>"
+            else
+              echo "No output directory specified, staying in repository root."
+            fi
+
             bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle .)"
             checksum="$(npx --package=armada-cli@0.4.1 --yes armada bundle checksum $bundle_filename)"
             echo $checksum > checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-            mv ~/project/repository/armada-bundle.tgz ~/project/armada-bundle.tgz
-        
+            mv armada-bundle.tgz ~/project/armada-bundle.tgz
+
       # store artifacts in circleci for download
       - store_artifacts:
           path: armada-bundle.tgz
