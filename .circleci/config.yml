@@ -171,12 +171,15 @@ jobs:
 
             BUNDLE_URL=""
             CHECKSUM=""
-            STATUS="failure"  # Assume failure initially
+            STATUS="failure"
 
-            if [ -f "~/project/repository/checksum" ]; then
-              CHECKSUM=$(cat ~/project/repository/checksum)
-              STATUS="success"  # Set to success only if the checksum file was successfully found and read
+            CHECKSUM_PATH="$HOME/project/repository/checksum"
+            if [ -f "$CHECKSUM_PATH" ]; then
+              CHECKSUM=$(cat "$CHECKSUM_PATH")
+              STATUS="success"
               BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz"
+            else
+              echo "Checksum file not found at $CHECKSUM_PATH"
             fi
 
             echo "Bundle URL: $BUNDLE_URL"
