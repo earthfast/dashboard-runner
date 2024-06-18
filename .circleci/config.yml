@@ -24,7 +24,7 @@ parameters:
     default: "npm run build"
   OUTPUT_DIR:
     type: string
-    default: "build"
+    default: ""
   ONE_CLICK_SERVER_URL:
     type: string
     default: ""
@@ -142,36 +142,53 @@ jobs:
           name: Create armada release
           working_directory: ~/project/repository
           command: |
+            # Navigate to the build directory if specified
+            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+              echo "Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
+              cd "<< pipeline.parameters.OUTPUT_DIR >>"
+            else
+              echo "No output directory specified, staying in repository root."
+            fi
+
             bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle .)"
             checksum="$(npx --package=armada-cli@0.4.1 --yes armada bundle checksum $bundle_filename)"
             echo $checksum > checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-            mv ~/project/repository/armada-bundle.tgz ~/project/armada-bundle.tgz
-        
+            mv armada-bundle.tgz ~/project/armada-bundle.tgz
+
       # store artifacts in circleci for download
       - store_artifacts:
           path: armada-bundle.tgz
       - store_artifacts:
           path: ~/project/repository/checksum
       - run:
-          name: Notify one click server of new release
+          name: Notify one click server of the outcome
           command: |
-            BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz"
-            PIPELINE_ID="<< pipeline.id >>"
-            CHECKSUM=$(cat ~/project/repository/checksum)
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
-            
+            PIPELINE_ID="<< pipeline.id >>"
+            BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz"
+            CHECKSUM=$(cat ~/project/repository/checksum)
+
+            STATUS="success"  # Assume success initially
+
+            if [ "$?" -ne 0 ]; then
+              STATUS="failure"
+              BUNDLE_URL=""
+              CHECKSUM=""
+            fi
+
             echo "Bundle URL: $BUNDLE_URL"
             echo "Pipeline ID: $PIPELINE_ID"
             echo "Checksum: $CHECKSUM"
+            echo "Status: $STATUS"
             echo "One Click Server URL: $ONE_CLICK_SERVER_URL"
+
+            DATA='{"checksum": "'"$CHECKSUM"'", "bundleUrl": "'"$BUNDLE_URL"'", "pipelineId": "'"$PIPELINE_ID"'", "status": "'"$STATUS"'"}'
+            echo "Data Payload: $DATA"
 
             FULL_URL="${ONE_CLICK_SERVER_URL}/circleci/notify"
             echo "Full URL: $FULL_URL"
-
-            DATA='{"checksum": "'"$CHECKSUM"'", "bundleUrl": "'"$BUNDLE_URL"'", "pipelineId": "'"$PIPELINE_ID"'"}'
-            echo "Data Payload: $DATA"
 
             curl -X POST -H "Content-Type: application/json" -d "$DATA" "$FULL_URL"
 
