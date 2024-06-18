@@ -168,15 +168,15 @@ jobs:
           command: |
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
             PIPELINE_ID="<< pipeline.id >>"
-            BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz"
-            CHECKSUM=$(cat ~/project/repository/checksum)
 
-            STATUS="success"  # Assume success initially
+            BUNDLE_URL=""
+            CHECKSUM=""
+            STATUS="failure"  # Assume failure initially
 
-            if [ "$?" -ne 0 ]; then
-              STATUS="failure"
-              BUNDLE_URL=""
-              CHECKSUM=""
+            if [ -f "~/project/repository/checksum" ]; then
+              CHECKSUM=$(cat ~/project/repository/checksum)
+              STATUS="success"  # Set to success only if the checksum file was successfully found and read
+              BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz"
             fi
 
             echo "Bundle URL: $BUNDLE_URL"
