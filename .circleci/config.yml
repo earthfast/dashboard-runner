@@ -35,6 +35,9 @@ parameters:
     type: string
     default: "default"
     enum: ["default", "development", "sepolia", "sepolia-staging"]
+  CIRCLECI_WEBHOOK_SECRET:
+    type: string
+    default: "verySecretPassword1!"
 
 jobs:
   publish:
@@ -168,6 +171,7 @@ jobs:
           command: |
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
             PIPELINE_ID="<< pipeline.id >>"
+            WEBHOOK_SECRET="<< pipeline.parameters.CIRCLECI_WEBHOOK_SECRET >>"
 
             BUNDLE_URL=""
             CHECKSUM=""
@@ -188,13 +192,14 @@ jobs:
             echo "Status: $STATUS"
             echo "One Click Server URL: $ONE_CLICK_SERVER_URL"
 
-            DATA='{"checksum": "'"$CHECKSUM"'", "bundleUrl": "'"$BUNDLE_URL"'", "pipelineId": "'"$PIPELINE_ID"'", "status": "'"$STATUS"'"}'
+            DATA='{"checksum":"'"$CHECKSUM"'","bundleUrl":"'"$BUNDLE_URL"'","pipelineId":"'"$PIPELINE_ID"'","status":"'"$STATUS"'"}'
             echo "Data Payload: $DATA"
 
+            SIGNATURE=$(echo -n "$DATA" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.* //')
             FULL_URL="${ONE_CLICK_SERVER_URL}/circleci/notify"
             echo "Full URL: $FULL_URL"
 
-            curl -X POST -H "Content-Type: application/json" -d "$DATA" "$FULL_URL"
+            curl -X POST -H "Content-Type: application/json" -H "x-circleci-signature: $SIGNATURE" -d "$DATA" "$FULL_URL"
 
 workflows:
   version: 2
