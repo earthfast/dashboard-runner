@@ -12,7 +12,7 @@ parameters:
     default: "https://github.com/thales-markets/thales-sport-markets"
   REF:
     type: string
-    default: "main"
+    default: ""
   BUILD_DIR:
     type: string
     default: ""
@@ -76,9 +76,11 @@ jobs:
                 name: Clone repository from URL
                 command: |
                   git clone "<< pipeline.parameters.REPOSITORY >>.git" ~/project/repository
-                  if [ "<< pipeline.parameters.REF >>" != "main" ]; then
-                    cd ~/project/repository
+                  cd ~/project/repository
+                  if [ -n "<< pipeline.parameters.REF >>" ]; then
                     git checkout "<< pipeline.parameters.REF >>"
+                  else
+                    echo "No branch specified, staying on default branch."
                   fi
             - run:
                 name: Run build command
