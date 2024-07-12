@@ -66,8 +66,6 @@ jobs:
             # Run the JavaScript script
             node decrypt.js
 
-            echo "Decrypted environment variables:"
-            cat /home/circleci/project/decrypted_env.txt
             echo "Environment variables after sourcing:"
             source /home/circleci/project/decrypted_env.txt
             env
