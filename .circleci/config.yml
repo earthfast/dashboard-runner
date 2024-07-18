@@ -39,7 +39,7 @@ parameters:
 jobs:
   publish:
     docker:
-      - image: cimg/node:current
+      - image: cimg/node:22.4.1
     steps:
       - run:
           name: Install dependencies
