@@ -104,7 +104,9 @@ jobs:
                 working_directory: ~/project/repository
                 command: |
                   set -e  # Ensure that the script fails if any command fails
-                  # source ~/project/.env
+                  if [ -f ~/project/.env ]; then
+                    source ~/project/.env
+                  fi
 
                   # Navigate to the build directory if specified
                   if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
