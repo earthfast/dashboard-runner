@@ -34,7 +34,7 @@ parameters:
   ENVIRONMENT:
     type: string
     default: "default"
-    enum: ["default", "development", "sepolia", "sepolia-staging"]
+    enum: ["default", "development", "staging", "sepolia-staging"]
 
 jobs:
   publish:
@@ -141,7 +141,7 @@ jobs:
 
                   if [ "<< pipeline.parameters.ENVIRONMENT >>" == "development" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_DEV
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "sepolia" ]; then
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "staging" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA
                   elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "staging-sepolia" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA_STAGING
