@@ -49,22 +49,24 @@ jobs:
       - run:
           name: Decode environment variables
           command: |
-            echo "Decoding environment variables..."
-            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/encrypted_data.txt
+            # echo "Decoding environment variables..."
+            # echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/encrypted_data.txt
 
-            # Create a JavaScript script to decrypt the environment variables
-            echo "const forge = require('node-forge');" > decrypt.js
-            echo "const fs = require('fs');" >> decrypt.js
-            echo "const path = require('path');" >> decrypt.js
-            echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt.js
-            echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt.js
-            echo "const encryptedData = fs.readFileSync(path.join('/home/circleci/project/encrypted_data.txt'), 'utf8');" >> decrypt.js
-            echo "const decodedData = forge.util.decode64(encryptedData);" >> decrypt.js
-            echo "const decryptedData = privateKey.decrypt(decodedData, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt.js
-            echo "fs.writeFileSync(path.join('/home/circleci/project/decrypted_env.txt'), decryptedData);" >> decrypt.js
+            # # Create a JavaScript script to decrypt the environment variables
+            # echo "const forge = require('node-forge');" > decrypt.js
+            # echo "const fs = require('fs');" >> decrypt.js
+            # echo "const path = require('path');" >> decrypt.js
+            # echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt.js
+            # echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt.js
+            # echo "const encryptedData = fs.readFileSync(path.join('/home/circleci/project/encrypted_data.txt'), 'utf8');" >> decrypt.js
+            # echo "const decodedData = forge.util.decode64(encryptedData);" >> decrypt.js
+            # echo "const decryptedData = privateKey.decrypt(decodedData, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt.js
+            # echo "fs.writeFileSync(path.join('/home/circleci/project/decrypted_env.txt'), decryptedData);" >> decrypt.js
 
-            # Run the JavaScript script
-            node decrypt.js
+            # # Run the JavaScript script
+            # node decrypt.js
+
+            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/decrypted_env.txt
 
             echo "Environment variables after sourcing:"
             source /home/circleci/project/decrypted_env.txt
