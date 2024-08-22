@@ -67,6 +67,7 @@ jobs:
             # node decrypt.js
 
             echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > /home/circleci/project/decrypted_env.txt
+            sed -i 's/^/export /' /home/circleci/project/decrypted_env.txt
 
             echo "Environment variables after sourcing:"
             source /home/circleci/project/decrypted_env.txt
