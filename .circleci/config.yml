@@ -163,6 +163,23 @@ jobs:
                   fi
 
       - run:
+          name: Check for index.html
+          command: |
+            OUTPUT_DIR=.
+            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            fi
+
+            if [ ! -f "${OUTPUT_DIR}/index.html" ]; then
+              echo "Error: index.html not found in ${OUTPUT_DIR}"
+              echo "This may indicate that the project is not using static export."
+              echo "Please ensure your build process generates an index.html file."
+              exit 1
+            else
+              echo "index.html found in ${OUTPUT_DIR}. Proceeding with the build."
+            fi
+
+      - run:
           name: Create armada release
           working_directory: ~/project/repository
           command: |
