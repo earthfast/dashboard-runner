@@ -9,7 +9,7 @@ parameters:
     default: ""
   REPOSITORY:
     type: string
-    default: "https://github.com/thales-markets/thales-sport-markets"
+    default: "https://github.com/jlmonroy13/vite-project"
   REF:
     type: string
     default: ""
@@ -24,7 +24,7 @@ parameters:
     default: "npm run build"
   OUTPUT_DIR:
     type: string
-    default: ""
+    default: "dist"
   ONE_CLICK_SERVER_URL:
     type: string
     default: ""
@@ -165,10 +165,20 @@ jobs:
       - run:
           name: Check for index.html
           command: |
+            cd ~/project/repository
             OUTPUT_DIR=.
             if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
               OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
             fi
+
+            echo "Current working directory:"
+            pwd
+
+            echo "Listing all files and directories:"
+            ls -la
+
+            echo "Checking for index.html in ${OUTPUT_DIR}"
+            ls -la ${OUTPUT_DIR}
 
             if [ ! -f "${OUTPUT_DIR}/index.html" ]; then
               echo "Error: index.html not found in ${OUTPUT_DIR}"
