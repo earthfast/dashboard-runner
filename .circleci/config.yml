@@ -166,27 +166,42 @@ jobs:
           name: Check for index.html
           command: |
             cd ~/project/repository
-            OUTPUT_DIR=.
-            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            OUTPUT_DIR="."
+
+            # Check if we're using the default repository
+            if [ "<< pipeline.parameters.REPOSITORY >>" == "https://github.com/jlmonroy13/vite-project" ]; then
+              # If using default repository, use default BUILD_COMMAND and OUTPUT_DIR
+              BUILD_COMMAND="npm run build"
+              OUTPUT_DIR="dist"
+            else
+              # If not using default repository, use the provided parameters
+              BUILD_COMMAND="<< pipeline.parameters.BUILD_COMMAND >>"
+              if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+                OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+              fi
+            fi
+
+            # Only change to OUTPUT_DIR if BUILD_COMMAND is not empty
+            if [ -n "$BUILD_COMMAND" ]; then
+              echo "Changing to output directory: ${OUTPUT_DIR}"
+              cd "$OUTPUT_DIR" || exit 1
+            else
+              echo "No build command specified, staying in repository root."
             fi
 
             echo "Current working directory:"
             pwd
 
-            echo "Listing all files and directories:"
+            echo "Checking for index.html in current directory"
             ls -la
 
-            echo "Checking for index.html in ${OUTPUT_DIR}"
-            ls -la ${OUTPUT_DIR}
-
-            if [ ! -f "${OUTPUT_DIR}/index.html" ]; then
-              echo "Error: index.html not found in ${OUTPUT_DIR}"
-              echo "This may indicate that the project is not using static export."
-              echo "Please ensure your build process generates an index.html file."
+            if [ ! -f "index.html" ]; then
+              echo "Error: index.html not found in $(pwd)"
+              echo "This may indicate that the project is not using static export or the build process failed."
+              echo "Please ensure your build process generates an index.html file in the correct directory."
               exit 1
             else
-              echo "index.html found in ${OUTPUT_DIR}. Proceeding with the build."
+              echo "index.html found in $(pwd). Proceeding with the build."
             fi
 
       - run:
