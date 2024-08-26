@@ -215,19 +215,35 @@ jobs:
           name: Create armada release
           working_directory: ~/project/repository
           command: |
-            OUTPUT_DIR=.
-            if [ -n "<< pipeline.parameters.BUILD_COMMAND >>" ]; then
-              if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-                echo "Build command specified. Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
-                OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
-              else
-                echo "Build command specified, but no output directory. Using repository root."
-              fi
+            # Check if we're using the default repository
+            if [ "<< pipeline.parameters.REPOSITORY >>" == "https://github.com/jlmonroy13/vite-project" ]; then
+              # If using default repository, use default BUILD_COMMAND and OUTPUT_DIR
+              BUILD_COMMAND="npm run build"
+              OUTPUT_DIR="dist"
             else
-              echo "No build command specified. Staying in repository root."
+              # If not using default repository, use the provided parameters
+              BUILD_COMMAND="<< pipeline.parameters.BUILD_COMMAND >>"
+              OUTPUT_DIR="."
+              if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+                OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+              fi
             fi
 
-            bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle "$OUTPUT_DIR")"
+            # Only change to OUTPUT_DIR if BUILD_COMMAND is not empty and the directory exists
+            if [ -n "$BUILD_COMMAND" ] && [ -d "$OUTPUT_DIR" ]; then
+              echo "Changing to output directory: ${OUTPUT_DIR}"
+              cd "$OUTPUT_DIR" || echo "Warning: Could not change to ${OUTPUT_DIR}, staying in current directory"
+            else
+              echo "Staying in current directory ($(pwd))"
+            fi
+
+            echo "Current working directory:"
+            pwd
+
+            echo "Listing current directory contents:"
+            ls -la
+
+            bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle .)"
             checksum="$(npx --package=armada-cli@0.4.1 --yes armada bundle checksum $bundle_filename)"
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
