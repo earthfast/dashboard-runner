@@ -216,11 +216,15 @@ jobs:
           working_directory: ~/project/repository
           command: |
             OUTPUT_DIR=.
-            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-              echo "Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
-              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            if [ -n "<< pipeline.parameters.BUILD_COMMAND >>" ]; then
+              if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+                echo "Build command specified. Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
+                OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+              else
+                echo "Build command specified, but no output directory. Using repository root."
+              fi
             else
-              echo "No output directory specified, staying in repository root."
+              echo "No build command specified. Staying in repository root."
             fi
 
             bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle "$OUTPUT_DIR")"
