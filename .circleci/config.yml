@@ -181,27 +181,34 @@ jobs:
               fi
             fi
 
-            # Only change to OUTPUT_DIR if BUILD_COMMAND is not empty
-            if [ -n "$BUILD_COMMAND" ]; then
+            # Only change to OUTPUT_DIR if BUILD_COMMAND is not empty and the directory exists
+            if [ -n "$BUILD_COMMAND" ] && [ -d "$OUTPUT_DIR" ]; then
               echo "Changing to output directory: ${OUTPUT_DIR}"
-              cd "$OUTPUT_DIR" || exit 1
+              cd "$OUTPUT_DIR" || echo "Warning: Could not change to ${OUTPUT_DIR}, staying in current directory"
             else
-              echo "No build command specified, staying in repository root."
+              echo "Staying in current directory ($(pwd))"
             fi
 
             echo "Current working directory:"
             pwd
 
-            echo "Checking for index.html in current directory"
+            echo "Listing current directory contents:"
             ls -la
 
             if [ ! -f "index.html" ]; then
-              echo "Error: index.html not found in $(pwd)"
-              echo "This may indicate that the project is not using static export or the build process failed."
-              echo "Please ensure your build process generates an index.html file in the correct directory."
-              exit 1
+              echo "Warning: index.html not found in current directory"
+              echo "Searching for index.html in subdirectories..."
+              INDEX_HTML_PATH=$(find . -name "index.html" | head -n 1)
+              if [ -n "$INDEX_HTML_PATH" ]; then
+                echo "index.html found at: $INDEX_HTML_PATH"
+              else
+                echo "Error: index.html not found in any subdirectory"
+                echo "This may indicate that the project is not using static export or the build process failed."
+                echo "Please ensure your build process generates an index.html file in the correct directory."
+                exit 1
+              fi
             else
-              echo "index.html found in $(pwd). Proceeding with the build."
+              echo "index.html found in current directory. Proceeding with the build."
             fi
 
       - run:
