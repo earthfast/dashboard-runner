@@ -196,17 +196,10 @@ jobs:
             ls -la
 
             if [ ! -f "index.html" ]; then
-              echo "Warning: index.html not found in current directory"
-              echo "Searching for index.html in subdirectories..."
-              INDEX_HTML_PATH=$(find . -name "index.html" | head -n 1)
-              if [ -n "$INDEX_HTML_PATH" ]; then
-                echo "index.html found at: $INDEX_HTML_PATH"
-              else
-                echo "Error: index.html not found in any subdirectory"
-                echo "This may indicate that the project is not using static export or the build process failed."
-                echo "Please ensure your build process generates an index.html file in the correct directory."
-                exit 1
-              fi
+              echo "Error: index.html not found in the current directory"
+              echo "This may indicate that the project is not using static export or the build process failed."
+              echo "Please ensure your build process generates an index.html file in the correct directory."
+              exit 1
             else
               echo "index.html found in current directory. Proceeding with the build."
             fi
@@ -242,25 +235,6 @@ jobs:
 
             echo "Listing current directory contents:"
             ls -la
-
-            # Check for index.html in current directory or subdirectories
-            if [ ! -f "index.html" ]; then
-              echo "Warning: index.html not found in current directory"
-              echo "Searching for index.html in subdirectories..."
-              INDEX_HTML_PATH=$(find . -name "index.html" | head -n 1)
-              if [ -n "$INDEX_HTML_PATH" ]; then
-                echo "index.html found at: $INDEX_HTML_PATH"
-                cd "$(dirname "$INDEX_HTML_PATH")"
-                echo "Changed to directory containing index.html: $(pwd)"
-              else
-                echo "Error: index.html not found in any subdirectory"
-                echo "This may indicate that the project is not using static export or the build process failed."
-                echo "Please ensure your build process generates an index.html file in the correct directory."
-                exit 1
-              fi
-            else
-              echo "index.html found in current directory. Proceeding with the build."
-            fi
 
             bundle_filename="$(npx --package=armada-cli@0.4.1 --yes armada bundle create armada-bundle .)"
             checksum="$(npx --package=armada-cli@0.4.1 --yes armada bundle checksum $bundle_filename)"
