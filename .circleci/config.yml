@@ -236,8 +236,8 @@ jobs:
             echo "Listing current directory contents:"
             ls -la
 
-            bundle_filename="$(npx --package=earthfast-cli@0.6.0 --yes earthfast bundle create earthfast-bundle .)"
-            checksum="$(npx --package=earthfast-cli@0.6.0 --yes earthfast bundle checksum $bundle_filename)"
+            bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle .)"
+            checksum="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle checksum $bundle_filename)"
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
