@@ -224,10 +224,10 @@ jobs:
 
             # Only change to OUTPUT_DIR if BUILD_COMMAND is not empty and the directory exists
             if [ -n "$BUILD_COMMAND" ] && [ -d "$OUTPUT_DIR" ]; then
-              echo "Changing to output directory: ${OUTPUT_DIR}"
-              cd "$OUTPUT_DIR" || echo "Warning: Could not change to ${OUTPUT_DIR}, staying in current directory"
+              echo "Output directory: ${OUTPUT_DIR}"
             else
-              echo "Staying in current directory ($(pwd))"
+              echo "Using current directory as output directory"
+              OUTPUT_DIR="."
             fi
 
             echo "Current working directory:"
@@ -249,7 +249,7 @@ jobs:
             # Check if the bundle was created
             if [ -f earthfast-bundle.tgz ]; then
               echo "Bundle created successfully."
-              
+
               echo "Generating checksum..."
               checksum=$(npx earthfast bundle checksum earthfast-bundle.tgz)
               echo "Checksum: $checksum"
