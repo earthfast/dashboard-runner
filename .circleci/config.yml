@@ -163,7 +163,7 @@ jobs:
                   fi
 
       - run:
-          name: Create armada release
+          name: Create earthfast release
           working_directory: ~/project/repository
           command: |
             OUTPUT_DIR=.
@@ -179,11 +179,11 @@ jobs:
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-            mv armada-bundle.tgz ~/project/armada-bundle.tgz
+            mv earthfast-bundle.tgz ~/project/earthfast-bundle.tgz
 
       # store artifacts in circleci for download
       - store_artifacts:
-          path: armada-bundle.tgz
+          path: earthfast-bundle.tgz
       - store_artifacts:
           path: ~/project/repository/checksum
       - run:
@@ -201,7 +201,7 @@ jobs:
             if [ -f "$CHECKSUM_PATH" ]; then
               CHECKSUM=$(cat "$CHECKSUM_PATH")
               STATUS="success"
-              BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/armada-bundle.tgz"
+              BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/earthfast-bundle.tgz"
             else
               echo "Checksum file not found at $CHECKSUM_PATH"
             fi
