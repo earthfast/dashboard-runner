@@ -236,31 +236,12 @@ jobs:
             echo "Listing current directory contents:"
             ls -la
 
-            # Install earthfast-cli from the specific branch
-            echo "Installing earthfast-cli..."
-            git clone --depth=1 -b vss/rename-non-contract-armada https://github.com/earthfast/earthfast-cli.git ~/earthfast-cli
-            cd ~/earthfast-cli
-            npm install
-
-            # Attempt to create the bundle
-            echo "Creating bundle..."
-            npm run run -- bundle create earthfast-bundle ~/project/repository/${OUTPUT_DIR}
-
-            # Check if the bundle was created
-            if [ -f earthfast-bundle.tgz ]; then
-              echo "Bundle created successfully."
-
-              echo "Generating checksum..."
-              checksum=$(npx earthfast bundle checksum earthfast-bundle.tgz)
-              echo "Checksum: $checksum"
-              echo "$checksum" > ~/project/repository/checksum
-
-              # Move the bundle file
-              mv earthfast-bundle.tgz ~/project/earthfast-bundle.tgz
-            else
-              echo "Bundle creation failed. Unable to proceed with checksum generation."
-              exit 1
-            fi
+            bundle_filename="$(npx --package=earthfast-cli@0.6.0 --yes earthfast bundle create earthfast-bundle .)"
+            checksum="$(npx --package=earthfast-cli@0.6.0 --yes earthfast bundle checksum $bundle_filename)"
+            echo $checksum > ~/project/repository/checksum
+            echo "Bundle Filename: $bundle_filename"
+            echo "Checksum: $checksum"
+            mv earthfast-bundle.tgz ~/project/earthfast-bundle.tgz
 
       # store artifacts in circleci for download
       - store_artifacts:
