@@ -1,0 +1,124 @@
+name: Trigger CircleCI Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      SOURCE_TYPE:
+        description: 'Source type'
+        required: true
+        type: choice
+        options:
+          - github
+          - url
+          - upload
+      S3_URL:
+        description: ''
+        required: false
+        type: string
+      REPOSITORY:
+        description: 'https://github.com/jlmonroy13/vite-project'
+        required: false
+        type: string
+      REF:
+        description: ''
+        required: false
+        type: string
+      BUILD_DIR:
+        description: ''
+        required: false
+        type: string
+      PACKAGE_INSTALL_COMMAND:
+        description: 'export NODE_OPTIONS=--openssl-legacy-provider && npm install'
+        required: false
+        type: string
+      BUILD_COMMAND:
+        description: 'npm run build'
+        required: false
+        type: string
+      OUTPUT_DIR:
+        description: 'dist'
+        required: false
+        type: string
+      ENVIRONMENT_VARIABLES:
+        description: ''
+        required: false
+        type: string
+
+jobs:
+  trigger-circleci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: npm install node-fetch
+
+      - name: Trigger CircleCI Build
+        env:
+          CIRCLECI_API_TOKEN: ${{ secrets.CIRCLECI_API_TOKEN }}
+          ONE_CLICK_SERVER_URL: ${{ secrets.ONE_CLICK_SERVER_URL }}
+        run: |
+          node -e "
+          const fetch = require('node-fetch');
+
+          const PIPELINE_ORG = 'earthfast/dashboard-runner';
+          const apiUrl = \`https://circleci.com/api/v2/project/gh/\${PIPELINE_ORG}/pipeline\`;
+          const circleCiToken = process.env.CIRCLECI_API_TOKEN;
+
+          if (!circleCiToken) {
+            throw new Error('CircleCI API token is not set in environment variables.');
+          }
+
+          const branch = process.env.GITHUB_REF === 'refs/heads/main' ? 'main' : 'dev';
+          const environment = process.env.GITHUB_REF === 'refs/heads/main' ? 'production' : 'development';
+
+          const body = {
+            parameters: {
+              SOURCE_TYPE: '${{ github.event.inputs.SOURCE_TYPE }}',
+              S3_URL: '${{ github.event.inputs.S3_URL }}',
+              REPOSITORY: '${{ github.event.inputs.REPOSITORY }}',
+              BUILD_DIR: '${{ github.event.inputs.BUILD_DIR }}',
+              PACKAGE_INSTALL_COMMAND: '${{ github.event.inputs.PACKAGE_INSTALL_COMMAND }}',
+              BUILD_COMMAND: '${{ github.event.inputs.BUILD_COMMAND }}',
+              OUTPUT_DIR: '${{ github.event.inputs.OUTPUT_DIR }}',
+              ENVIRONMENT_VARIABLES: '${{ github.event.inputs.ENVIRONMENT_VARIABLES }}',
+              ONE_CLICK_SERVER_URL: process.env.ONE_CLICK_SERVER_URL,
+              ENVIRONMENT: environment,
+            },
+            branch: branch,
+          };
+
+          if ('${{ github.event.inputs.REF }}') {
+            body.parameters.REF = '${{ github.event.inputs.REF }}';
+          }
+
+          console.log('Request body:', JSON.stringify(body, null, 2));
+
+          fetch(apiUrl, {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers: {
+              'Circle-Token': circleCiToken,
+              'Content-Type': 'application/json',
+            },
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.state === 'pending') {
+                console.log('Build triggered successfully, response:', data);
+              } else {
+                console.error('Error response data:', data);
+                process.exit(1);
+              }
+            })
+            .catch(error => {
+              console.error('Error in triggering CircleCI build:', error);
+              process.exit(1);
+            });
+          "
