@@ -1,0 +1,39 @@
+name: Trigger CircleCI Build
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  trigger-circleci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger CircleCI Pipeline
+        run: |
+          curl -X POST \
+            -H "Circle-Token: ${{ secrets.CIRCLECI_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "parameters": {
+                "SOURCE_TYPE": "github",
+                "S3_URL": "",
+                "REPOSITORY": "https://github.com/cheran-senthil/cheran-senthil.github.io",
+                "REF": "master",
+                "BUILD_DIR": ".",
+                "PACKAGE_INSTALL_COMMAND": "ls",
+                "BUILD_COMMAND": "ls",
+                "OUTPUT_DIR": ".",
+                "ONE_CLICK_SERVER_URL": "https://jorge.ngrok.pro",
+                "ENVIRONMENT_VARIABLES": "",
+                "ENVIRONMENT": "development"
+              }
+            }' \
+            https://circleci.com/api/v2/project/gh/earthfast/dashboard-runner/pipeline
+        env:
+          CIRCLECI_API_TOKEN: ${{ secrets.CIRCLECI_API_TOKEN }}

@@ -238,10 +238,9 @@ jobs:
 
 workflows:
   version: 2
-  build-and-publish:
+  no-auto-workflow:
     jobs:
       - publish:
           filters:
             branches:
               ignore: /.*/  # This ensures the workflow doesn't run on any branch push
-
