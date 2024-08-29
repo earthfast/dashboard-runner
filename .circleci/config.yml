@@ -90,7 +90,6 @@ jobs:
             or:
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "url"]
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "github"]
-
           steps:
             - run:
                 name: Clone repository from URL
@@ -241,4 +240,8 @@ workflows:
   version: 2
   build-and-publish:
     jobs:
-      - publish
+      - publish:
+          filters:
+            branches:
+              ignore: /.*/  # This ensures the workflow doesn't run on any branch push
+
