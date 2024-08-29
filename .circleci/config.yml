@@ -179,22 +179,22 @@ jobs:
 
       - run:
           name: Create earthfast release
-          working_directory: ~/project/repository
+          working_directory: ~/project
           command: |
             OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
             if [ -z "$OUTPUT_DIR" ] || [ "$OUTPUT_DIR" = "." ]; then
-              echo "No specific output directory specified or '.' provided. Using current directory."
-              bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle)"
+              BUNDLE_PATH="repository"
             else
-              echo "Changing to output directory: $OUTPUT_DIR"
-              bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle "$OUTPUT_DIR")"
+              BUNDLE_PATH="repository/$OUTPUT_DIR"
             fi
+
+            echo "Creating bundle from path: $BUNDLE_PATH"
+            bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle "$BUNDLE_PATH")"
 
             checksum="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle checksum $bundle_filename)"
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-            mv earthfast-bundle.tgz ~/project/earthfast-bundle.tgz
 
       # store artifacts in circleci for download
       - store_artifacts:
