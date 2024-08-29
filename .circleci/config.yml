@@ -181,15 +181,15 @@ jobs:
           name: Create earthfast release
           working_directory: ~/project/repository
           command: |
-            OUTPUT_DIR=.
-            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-              echo "Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
-              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            if [ -z "$OUTPUT_DIR" ] || [ "$OUTPUT_DIR" = "." ]; then
+              echo "No specific output directory specified or '.' provided. Using current directory."
+              bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle)"
             else
-              echo "No output directory specified, staying in repository root."
+              echo "Changing to output directory: $OUTPUT_DIR"
+              bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle "$OUTPUT_DIR")"
             fi
 
-            bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle "$OUTPUT_DIR")"
             checksum="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle checksum $bundle_filename)"
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
