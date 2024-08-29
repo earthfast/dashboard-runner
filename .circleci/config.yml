@@ -90,7 +90,6 @@ jobs:
             or:
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "url"]
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "github"]
-
           steps:
             - run:
                 name: Clone repository from URL
@@ -163,23 +162,39 @@ jobs:
                   fi
 
       - run:
-          name: Create earthfast release
+          name: Check for index.html
           working_directory: ~/project/repository
           command: |
             OUTPUT_DIR=.
             if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-              echo "Changing to output directory: << pipeline.parameters.OUTPUT_DIR >>"
               OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
-            else
-              echo "No output directory specified, staying in repository root."
             fi
 
-            bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle "$OUTPUT_DIR")"
+            if [ -f "$OUTPUT_DIR/index.html" ]; then
+              echo "index.html found in $OUTPUT_DIR"
+            else
+              echo "Error: index.html not found in $OUTPUT_DIR"
+              exit 1
+            fi
+
+      - run:
+          name: Create earthfast release
+          working_directory: ~/project
+          command: |
+            OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            if [ -z "$OUTPUT_DIR" ] || [ "$OUTPUT_DIR" = "." ]; then
+              BUNDLE_PATH="repository"
+            else
+              BUNDLE_PATH="repository/$OUTPUT_DIR"
+            fi
+
+            echo "Creating bundle from path: $BUNDLE_PATH"
+            bundle_filename="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle create earthfast-bundle "$BUNDLE_PATH")"
+
             checksum="$(npx --package=earthfast-cli@0.7.0 --yes earthfast bundle checksum $bundle_filename)"
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
-            mv earthfast-bundle.tgz ~/project/earthfast-bundle.tgz
 
       # store artifacts in circleci for download
       - store_artifacts:
