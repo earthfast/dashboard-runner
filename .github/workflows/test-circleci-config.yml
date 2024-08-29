@@ -1,0 +1,55 @@
+name: Test CircleCI Config
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-circleci-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install CircleCI CLI
+        run: |
+          curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | sudo bash
+
+      - name: Validate CircleCI config
+        run: circleci config validate
+
+      - name: Set up test parameters
+        run: |
+          echo "SOURCE_TYPE=github" >> $GITHUB_ENV
+          echo "S3_URL=" >> $GITHUB_ENV
+          echo "REPOSITORY=https://github.com/cheran-senthil/cheran-senthil.github.io" >> $GITHUB_ENV
+          echo "REF=main" >> $GITHUB_ENV
+          echo "BUILD_DIR=." >> $GITHUB_ENV
+          echo "PACKAGE_INSTALL_COMMAND=ls" >> $GITHUB_ENV
+          echo "BUILD_COMMAND=ls" >> $GITHUB_ENV
+          echo "OUTPUT_DIR=." >> $GITHUB_ENV
+          echo "ONE_CLICK_SERVER_URL=https://jorge.ngrok.pro" >> $GITHUB_ENV
+          echo "ENVIRONMENT_VARIABLES=" >> $GITHUB_ENV
+          echo "ENVIRONMENT=development" >> $GITHUB_ENV
+
+      - name: Run CircleCI build locally
+        run: |
+          circleci local execute \
+            --job publish \
+            --env SOURCE_TYPE=$SOURCE_TYPE \
+            --env S3_URL=$S3_URL \
+            --env REPOSITORY=$REPOSITORY \
+            --env REF=$REF \
+            --env BUILD_DIR=$BUILD_DIR \
+            --env PACKAGE_INSTALL_COMMAND="$PACKAGE_INSTALL_COMMAND" \
+            --env BUILD_COMMAND="$BUILD_COMMAND" \
+            --env OUTPUT_DIR=$OUTPUT_DIR \
+            --env ONE_CLICK_SERVER_URL=$ONE_CLICK_SERVER_URL \
+            --env ENVIRONMENT_VARIABLES=$ENVIRONMENT_VARIABLES \
+            --env ENVIRONMENT=$ENVIRONMENT
+        env:
+          CIRCLECI_CLI_TOKEN: ${{ secrets.CIRCLECI_CLI_TOKEN }}
