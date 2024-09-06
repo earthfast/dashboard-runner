@@ -35,12 +35,24 @@ parameters:
     type: string
     default: "default"
     enum: ["default", "development", "staging", "sepolia-staging"]
+  CI_TRIGGER:
+    type: boolean
+    default: false
 
 jobs:
   publish:
     docker:
       - image: cimg/node:22.4.1
     steps:
+      - run:
+          name: Check CI_TRIGGER
+          command: |
+            if [ "<< pipeline.parameters.CI_TRIGGER >>" != true ]; then
+              echo "CI_TRIGGER is not true. Exiting with success."
+              circleci-agent step halt
+            else
+              echo "CI_TRIGGER is true. Continuing with the workflow."
+            fi
       - run:
           name: Install dependencies
           command: |
