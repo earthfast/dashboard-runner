@@ -21,7 +21,7 @@ jobs:
     - name: Push to private repository
       env:
         SOURCE_REPO: "earthfast/dashboard-runner"
-        TARGET_REPO: ${{ env.TARGET_PRIVATE_MIRROR_REPO }}
+        TARGET_REPO: ${{ secrets.TARGET_PRIVATE_MIRROR_REPO }}
         GITHUB_PAT: ${{ secrets.GH_PAT }}
       run: |
         # Configure Git
