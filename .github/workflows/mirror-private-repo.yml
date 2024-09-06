@@ -1,13 +1,12 @@
 name: Mirror to Private Repository
 
 on:
-  schedule:
-    - cron: '0 * * * *'  # Runs every hour
-  workflow_dispatch:  # Allows manual triggering
   push:
     branches:
-      - '*'  # Trigger on pushes to any branch
+      - main
+      - dev
       - dm-mirror-private-repo
+  workflow_dispatch:  # Keeps manual triggering option
 
 jobs:
   mirror_repository:
@@ -21,18 +20,12 @@ jobs:
     - name: Push to private repository
       env:
         GH_TOKEN: ${{ secrets.GH_PAT }}
+        TARGET_PRIVATE_MIRROR_REPO: ${{ secrets.TARGET_PRIVATE_MIRROR_REPO }}
       run: |
         # Configure Git
         git config user.name github-actions
         git config user.email github-actions@github.com
 
-        # Debug: Print Git version
-        git --version
-
-        # Debug: Print target repo URL (masking the token)
-        echo "Target repo: https://github.com/earthfast/dashboard-runner-private.git"
-
-        # Debug: Check if GH_PAT is set
         if [ -z "$GH_TOKEN" ]; then
           echo "Error: GH_PAT is not set"
           exit 1
@@ -43,9 +36,9 @@ jobs:
         cd source-repo
 
         # Push branches to the private repository
-        git push --prune https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git +refs/heads/*:refs/heads/*
+        git push --prune https://${GH_TOKEN}@github.com/${TARGET_PRIVATE_MIRROR_REPO}.git +refs/heads/*:refs/heads/*
 
         # Push tags to the private repository
-        git push --prune https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git +refs/tags/*:refs/tags/*
+        git push --prune https://${GH_TOKEN}@github.com/${TARGET_PRIVATE_MIRROR_REPO}.git +refs/tags/*:refs/tags/*
 
         echo "Repository mirrored successfully!"
