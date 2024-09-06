@@ -38,19 +38,14 @@ jobs:
           exit 1
         fi
 
-        # Clone the private repository using GH_TOKEN
-        git clone https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git /tmp/private-repo || echo "Failed to clone target repository"
+        # Clone the source repository
+        git clone --mirror https://${GH_TOKEN}@github.com/earthfast/dashboard-runner.git source-repo
 
-        # If clone successful, push to the private repository
-        if [ -d "/tmp/private-repo" ]; then
-          cd /tmp/private-repo
-          git remote add source https://${GH_TOKEN}@github.com/earthfast/dashboard-runner.git
-          git fetch source --tags
-          git push --mirror source
-          echo "Repository mirrored successfully!"
-        else
-          echo "Failed to clone the target repository. Check your GH_PAT permissions."
-        fi
+        # Push to the private repository
+        cd source-repo
+        git push --mirror https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git
+
+        echo "Repository mirrored successfully!"
 
         # Debug: Check GitHub API rate limit
         curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/rate_limit
