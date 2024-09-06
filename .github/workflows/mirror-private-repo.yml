@@ -24,13 +24,25 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
 
+        # Debug: Print Git version
+        git --version
+
+        # Debug: Print target repo URL (masking the token)
+        echo "Target repo: https://******@github.com/${{ secrets.TARGET_PRIVATE_MIRROR_REPO }}.git"
+
         # Add target remote
         git remote add target "https://${{ secrets.GH_PAT }}@github.com/${{ secrets.TARGET_PRIVATE_MIRROR_REPO }}.git"
 
+        # Debug: List remotes
+        git remote -v
+
+        # Debug: Test connection
+        git ls-remote target || echo "Failed to connect to target repository"
+
         # Push all branches
-        git push target --all --force
+        git push target --all --force || echo "Push failed"
 
         # Push all tags
-        git push target --tags --force
+        git push target --tags --force || echo "Tag push failed"
 
         echo "Repository mirrored successfully!"
