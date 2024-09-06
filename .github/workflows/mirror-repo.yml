@@ -48,10 +48,11 @@ jobs:
         git fetch source --tags
         
         # Mirror all branches
-        for branch in $(git ls-remote --heads source | cut -f2); do
+        git branch -r | grep -v '\->' | while read remote; do
+          branch="${remote#source/}"
           echo "Mirroring branch: $branch"
-          git checkout -B ${branch#refs/heads/} source/$branch
-          git push origin ${branch#refs/heads/} --force
+          git branch -f "$branch" "$remote"
+          git push -f origin "$branch"
         done
         
         # Push all tags
