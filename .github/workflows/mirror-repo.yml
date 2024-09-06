@@ -1,0 +1,60 @@
+name: Mirror All Branches (Mirror Repo Only)
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Runs every 15 minutes
+  workflow_dispatch:  # Allows manual triggering
+  push:
+    branches:
+      - '*'  # Trigger on pushes to any branch
+
+jobs:
+  check_repository:
+    runs-on: ubuntu-latest
+    outputs:
+      is_mirror: ${{ steps.check.outputs.is_mirror }}
+    steps:
+    - name: Check if this is the mirror repository
+      id: check
+      run: |
+        if [ "${{ github.repository }}" = "earthfast/dashboard-runner-private" ]; then
+          echo "is_mirror=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_mirror=false" >> $GITHUB_OUTPUT
+        fi
+
+  mirror_repository:
+    needs: check_repository
+    if: needs.check_repository.outputs.is_mirror == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # Fetch all history for all branches and tags
+
+    - name: Configure Git
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+
+    - name: Mirror All Branches
+      env:
+        SOURCE_REPO: "earthfast/dashboard-runner"
+        SOURCE_REPO_URL: "https://github.com/earthfast/dashboard-runner.git"
+      run: |
+        # Fetch the source repository
+        git remote add source $SOURCE_REPO_URL
+        git fetch source --tags
+        
+        # Mirror all branches
+        for branch in $(git ls-remote --heads source | cut -f2); do
+          echo "Mirroring branch: $branch"
+          git checkout -B ${branch#refs/heads/} source/$branch
+          git push origin ${branch#refs/heads/} --force
+        done
+        
+        # Push all tags
+        git push origin --tags --force
+        
+        echo "All branches and tags mirrored successfully!"
