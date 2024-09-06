@@ -1,0 +1,40 @@
+name: Mirror to Private Repository
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Runs every hour
+  workflow_dispatch:  # Allows manual triggering
+  push:
+    branches:
+      - '*'  # Trigger on pushes to any branch
+      - dm-mirror-private-repo
+
+jobs:
+  mirror_repository:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # Fetch all history for all branches and tags
+
+    - name: Push to private repository
+      env:
+        SOURCE_REPO: "earthfast/dashboard-runner"
+        TARGET_REPO: ${{ env.TARGET_PRIVATE_MIRROR_REPO }}
+        GITHUB_PAT: ${{ secrets.GH_PAT }}
+      run: |
+        # Configure Git
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+
+        # Add target remote
+        git remote add target "https://${GH_PAT}@github.com/${TARGET_REPO}.git"
+
+        # Push all branches
+        git push target --all --force
+
+        # Push all tags
+        git push target --tags --force
+
+        echo "Repository mirrored successfully!"
