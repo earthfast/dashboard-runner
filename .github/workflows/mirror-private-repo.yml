@@ -49,6 +49,3 @@ jobs:
         git push --prune https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git +refs/tags/*:refs/tags/*
 
         echo "Repository mirrored successfully!"
-
-        # Debug: Check GitHub API rate limit
-        curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/rate_limit
