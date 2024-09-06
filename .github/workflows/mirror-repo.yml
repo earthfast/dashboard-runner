@@ -42,20 +42,35 @@ jobs:
       env:
         SOURCE_REPO: "earthfast/dashboard-runner"
         SOURCE_REPO_URL: "https://github.com/earthfast/dashboard-runner.git"
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        # Create a new worktree for mirroring operations
+        git worktree add ../mirror-worktree
+
+        # Change to the new worktree
+        cd ../mirror-worktree
+
         # Fetch the source repository
         git remote add source $SOURCE_REPO_URL
         git fetch source --tags
-        
+
         # Mirror all branches
         git branch -r | grep -v '\->' | while read remote; do
           branch="${remote#source/}"
           echo "Mirroring branch: $branch"
           git branch -f "$branch" "$remote"
-          git push -f origin "$branch"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
         done
         
         # Push all tags
-        git push origin --tags --force
+        git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" --tags --force
         
         echo "All branches and tags mirrored successfully!"
+
+    - name: Cleanup
+      if: always()
+      run: |
+        # Remove the worktree
+        git worktree remove ../mirror-worktree
+        # Remove the source remote
+        git remote remove source
