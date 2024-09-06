@@ -40,10 +40,13 @@ jobs:
 
         # Clone the source repository
         git clone --mirror https://${GH_TOKEN}@github.com/earthfast/dashboard-runner.git source-repo
-
-        # Push to the private repository
         cd source-repo
-        git push --mirror https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git
+
+        # Push branches to the private repository
+        git push --prune https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git +refs/heads/*:refs/heads/*
+
+        # Push tags to the private repository
+        git push --prune https://${GH_TOKEN}@github.com/earthfast/dashboard-runner-private.git +refs/tags/*:refs/tags/*
 
         echo "Repository mirrored successfully!"
 
