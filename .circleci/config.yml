@@ -38,6 +38,9 @@ parameters:
   CI_TRIGGER:
     type: boolean
     default: false
+  GITHUB_ACCESS_TOKEN:
+    type: string
+    default: ""
 
 jobs:
   publish:
@@ -104,14 +107,15 @@ jobs:
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "github"]
           steps:
             - run:
-                name: Clone repository from URL
+                name: Clone repository
                 command: |
-                  git clone "<< pipeline.parameters.REPOSITORY >>.git" ~/project/repository
-                  cd ~/project/repository
-                  if [ -n "<< pipeline.parameters.REF >>" ]; then
-                    git checkout "<< pipeline.parameters.REF >>"
+                  REPO_URL="<< pipeline.parameters.REPOSITORY >>"
+                  REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
+                  
+                  if [ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ]; then
+                    git clone "https://<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>@github.com/${REPO_PATH}" ~/project/repository
                   else
-                    echo "No branch specified, staying on default branch."
+                    git clone "$REPO_URL" ~/project/repository
                   fi
             - run:
                 name: Run build command
