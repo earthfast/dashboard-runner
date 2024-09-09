@@ -36,7 +36,7 @@ parameters:
     default: "default"
     enum: ["default", "development", "staging", "sepolia-staging"]
   GITHUB_ACCESS_TOKEN:
-    type: env_var_name
+    type: string
     default: GITHUB_ACCESS_TOKEN
 
 jobs:
