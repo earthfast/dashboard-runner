@@ -63,11 +63,14 @@ jobs:
               echo "fs.writeFileSync('decrypted_token.txt', decryptedToken);" >> decrypt_token.js
 
               node decrypt_token.js
-              echo 'export GITHUB_ACCESS_TOKEN=$(cat decrypted_token.txt)' >> $BASH_ENV
-              source $BASH_ENV
+              if [ -f decrypted_token.txt ]; then
+                echo 'export GITHUB_ACCESS_TOKEN=$(cat decrypted_token.txt)' > ~/project/github_token.sh
+                source ~/project/github_token.sh
+                echo "GITHUB_ACCESS_TOKEN has been decrypted and saved to ~/project/github_token.sh"
+              else
+                echo "Error: decrypted_token.txt was not created. Decryption likely failed."
+              fi
               rm decrypt_token.js decrypted_token.txt
-
-              echo "GITHUB_ACCESS_TOKEN has been decrypted and set as an environment variable."
             else
               echo "No GITHUB_ACCESS_TOKEN provided, skipping decryption."
             fi
@@ -119,6 +122,10 @@ jobs:
             - run:
                 name: Clone repository
                 command: |
+                  if [ -f ~/project/github_token.sh ]; then
+                    source ~/project/github_token.sh
+                  fi
+
                   REPO_URL="<< pipeline.parameters.REPOSITORY >>"
                   REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
                   
