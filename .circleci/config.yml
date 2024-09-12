@@ -121,8 +121,8 @@ jobs:
                   REPO_URL="<< pipeline.parameters.REPOSITORY >>"
                   REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
                   
-                  if [ -n ${process.env.GITHUB_ACCESS_TOKEN} ]; then
-                    git clone "https://${process.env.GITHUB_ACCESS_TOKEN}@github.com/${REPO_PATH}" ~/project/repository
+                  if [ -n "$GITHUB_ACCESS_TOKEN" ]; then
+                    git clone "https://$GITHUB_ACCESS_TOKEN@github.com/${REPO_PATH}" ~/project/repository
                   else
                     git clone "$REPO_URL" ~/project/repository
                   fi
