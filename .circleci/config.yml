@@ -63,7 +63,8 @@ jobs:
               echo "fs.writeFileSync('decrypted_token.txt', decryptedToken);" >> decrypt_token.js
 
               node decrypt_token.js
-              export GITHUB_ACCESS_TOKEN=$(cat decrypted_token.txt)
+              echo 'export GITHUB_ACCESS_TOKEN=$(cat decrypted_token.txt)' >> $BASH_ENV
+              source $BASH_ENV
               rm decrypt_token.js decrypted_token.txt
 
               echo "GITHUB_ACCESS_TOKEN has been decrypted and set as an environment variable."
@@ -121,9 +122,16 @@ jobs:
                   REPO_URL="<< pipeline.parameters.REPOSITORY >>"
                   REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
                   
+                  echo "Debugging information:"
+                  echo "REPO_URL: $REPO_URL"
+                  echo "REPO_PATH: $REPO_PATH"
+                  echo "GITHUB_ACCESS_TOKEN is set: $([[ -n "$GITHUB_ACCESS_TOKEN" ]] && echo 'Yes' || echo 'No')"
+                  
                   if [ -n "$GITHUB_ACCESS_TOKEN" ]; then
+                    echo "Cloning with token..."
                     git clone "https://$GITHUB_ACCESS_TOKEN@github.com/${REPO_PATH}" ~/project/repository
                   else
+                    echo "Cloning without token..."
                     git clone "$REPO_URL" ~/project/repository
                   fi
             - run:
