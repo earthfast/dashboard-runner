@@ -50,6 +50,28 @@ jobs:
             sudo apt-get update && sudo apt-get install -y awscli
             npm install node-forge
       - run:
+          name: Decrypt GITHUB_ACCESS_TOKEN
+          command: |
+            if [ -n "<< pipeline.parameters.ENCRYPTED_GITHUB_ACCESS_TOKEN >>" ]; then
+              sudo npm install -g node-forge
+
+              echo "const forge = require('node-forge');" > decrypt_token.js
+              echo "const fs = require('fs');" >> decrypt_token.js
+              echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt_token.js
+              echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt_token.js
+              echo "const encryptedToken = forge.util.decode64(process.env.ENCRYPTED_GITHUB_ACCESS_TOKEN);" >> decrypt_token.js
+              echo "const decryptedToken = privateKey.decrypt(encryptedToken, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt_token.js
+              echo "fs.writeFileSync('decrypted_token.txt', decryptedToken);" >> decrypt_token.js
+
+              node decrypt_token.js
+              export GITHUB_ACCESS_TOKEN=$(cat decrypted_token.txt)
+              rm decrypt_token.js decrypted_token.txt
+
+              echo "GITHUB_ACCESS_TOKEN has been decrypted and set as an environment variable."
+            else
+              echo "No ENCRYPTED_GITHUB_ACCESS_TOKEN provided, skipping decryption."
+            fi
+      - run:
           name: Decode environment variables
           command: |
             # echo "Decoding environment variables..."
