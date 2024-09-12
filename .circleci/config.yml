@@ -53,7 +53,7 @@ jobs:
           name: Decrypt GITHUB_ACCESS_TOKEN
           command: |
             if [ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ]; then
-              export GITHUB_ACCESS_TOKEN="${pipeline.parameters.GITHUB_ACCESS_TOKEN}"
+              export GITHUB_ACCESS_TOKEN="<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>"
               echo "const forge = require('node-forge');" > decrypt_token.js
               echo "const fs = require('fs');" >> decrypt_token.js
               echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt_token.js
