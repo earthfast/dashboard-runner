@@ -50,31 +50,6 @@ jobs:
             sudo apt-get update && sudo apt-get install -y awscli
             npm install node-forge
       - run:
-          name: Decrypt GITHUB_ACCESS_TOKEN
-          command: |
-            if [ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ]; then
-              export GITHUB_ACCESS_TOKEN="<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>"
-              echo "const forge = require('node-forge');" > decrypt_token.js
-              echo "const fs = require('fs');" >> decrypt_token.js
-              echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt_token.js
-              echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt_token.js
-              echo "const encryptedToken = forge.util.decode64(process.env.GITHUB_ACCESS_TOKEN);" >> decrypt_token.js
-              echo "const decryptedToken = privateKey.decrypt(encryptedToken, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt_token.js
-              echo "fs.writeFileSync('decrypted_token.txt', decryptedToken);" >> decrypt_token.js
-
-              node decrypt_token.js
-              if [ -f decrypted_token.txt ]; then
-                echo 'export GITHUB_ACCESS_TOKEN=$(cat decrypted_token.txt)' > ~/project/github_token.sh
-                source ~/project/github_token.sh
-                echo "GITHUB_ACCESS_TOKEN has been decrypted and saved to ~/project/github_token.sh"
-              else
-                echo "Error: decrypted_token.txt was not created. Decryption likely failed."
-              fi
-              rm decrypt_token.js decrypted_token.txt
-            else
-              echo "No GITHUB_ACCESS_TOKEN provided, skipping decryption."
-            fi
-      - run:
           name: Decode environment variables
           command: |
             # echo "Decoding environment variables..."
@@ -120,27 +95,46 @@ jobs:
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "github"]
           steps:
             - run:
-                name: Clone repository
+                name: Decrypt GITHUB_ACCESS_TOKEN and Clone Repository
                 command: |
-                  if [ -f ~/project/github_token.sh ]; then
-                    source ~/project/github_token.sh
-                  fi
-
                   REPO_URL="<< pipeline.parameters.REPOSITORY >>"
                   REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
                   
                   echo "Debugging information:"
                   echo "REPO_URL: $REPO_URL"
                   echo "REPO_PATH: $REPO_PATH"
-                  echo "GITHUB_ACCESS_TOKEN is set: $([[ -n "$GITHUB_ACCESS_TOKEN" ]] && echo 'Yes' || echo 'No')"
-                  
-                  if [ -n "$GITHUB_ACCESS_TOKEN" ]; then
-                    echo "Cloning with token..."
-                    git clone "https://$GITHUB_ACCESS_TOKEN@github.com/${REPO_PATH}" ~/project/repository
+                  echo "GITHUB_ACCESS_TOKEN parameter is set: $([[ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ]] && echo 'Yes' || echo 'No')"
+                  echo "BASE64_ENCODED_PRIVATE_KEY is set: $([[ -n "$BASE64_ENCODED_PRIVATE_KEY" ]] && echo 'Yes' || echo 'No')"
+
+                  if [ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ] && [ -n "$BASE64_ENCODED_PRIVATE_KEY" ]; then
+                    echo "Decrypting GITHUB_ACCESS_TOKEN..."
+                    ENCRYPTED_TOKEN="<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>"
+                    
+                    echo "const forge = require('node-forge');" > decrypt_token.js
+                    echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt_token.js
+                    echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt_token.js
+                    echo "const encryptedToken = forge.util.decode64('$ENCRYPTED_TOKEN');" >> decrypt_token.js
+                    echo "const decryptedToken = privateKey.decrypt(encryptedToken, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt_token.js
+                    echo "console.log(decryptedToken);" >> decrypt_token.js
+
+                    DECRYPTED_TOKEN=$(node decrypt_token.js)
+                    rm decrypt_token.js
+
+                    if [ -n "$DECRYPTED_TOKEN" ]; then
+                      echo "GITHUB_ACCESS_TOKEN has been decrypted successfully."
+                      echo "Cloning with token..."
+                      git clone "https://$DECRYPTED_TOKEN@github.com/${REPO_PATH}" ~/project/repository
+                    else
+                      echo "Error: Failed to decrypt GITHUB_ACCESS_TOKEN."
+                      exit 1
+                    fi
                   else
-                    echo "Cloning without token..."
+                    echo "GITHUB_ACCESS_TOKEN or BASE64_ENCODED_PRIVATE_KEY is missing. Cloning without token..."
                     git clone "$REPO_URL" ~/project/repository
                   fi
+
+                  # Clear the decrypted token from memory
+                  DECRYPTED_TOKEN=""
             - run:
                 name: Run build command
                 working_directory: ~/project/repository
