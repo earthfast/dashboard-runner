@@ -49,6 +49,13 @@ jobs:
   publish:
     docker:
       - image: cimg/base:stable
+    steps:
+      - run:
+          name: Install AWS CLI
+          command: |
+            if [ ! -f "/usr/local/bin/aws" ]; then
+              sudo apt-get update && sudo apt-get install -y awscli
+            fi
 
       - run:
           name: Install NVM and Node.js
@@ -64,45 +71,45 @@ jobs:
             echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
       - run:
-          name: Install AWS CLI
+          name: Install Dependencies
           command: |
-            if [ ! -f "/usr/local/bin/aws" ]; then
-              sudo apt-get update && sudo apt-get install -y awscli
-            fi
+            npm install node-forge
 
       - run:
-          name: Print Node.js version
+          name: Create Decryption Script
           command: |
-            node --version
-            npm --version
+            cat << EOF > ~/project/decrypt.js
+            const forge = require('node-forge');
+            const fs = require('fs');
+
+            function decryptData(encryptedData) {
+              const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');
+              const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+              const decodedData = forge.util.decode64(encryptedData);
+              return privateKey.decrypt(decodedData, 'RSA-OAEP', {
+                md: forge.md.sha256.create(),
+                mgf1: { md: forge.md.sha1.create() }
+              });
+            }
+
+            const encryptedData = process.argv[2];
+            console.log(decryptData(encryptedData));
+            EOF
 
       - run:
           name: Decode secrets
           command: |
             echo "Decoding secrets..."
             echo "<< pipeline.parameters.SECRETS >>" > ~/project/encrypted_data.txt
+            node ~/project/decrypt.js "$(cat ~/project/encrypted_data.txt)" > ~/project/decrypted_secrets.txt
+            
+            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/environment_variables.txt
 
-            # Create a JavaScript script to decrypt the secrets
-            echo "const forge = require('node-forge');" > decrypt.js
-            echo "const fs = require('fs');" >> decrypt.js
-            echo "const path = require('path');" >> decrypt.js
-            echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt.js
-            echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt.js
-            echo "const encryptedData = fs.readFileSync(path.join('/home/circleci/project/encrypted_data.txt'), 'utf8');" >> decrypt.js
-            echo "const decodedData = forge.util.decode64(encryptedData);" >> decrypt.js
-            echo "const decryptedData = privateKey.decrypt(decodedData, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt.js
-            echo "fs.writeFileSync(path.join('/home/circleci/project/decrypted_secrets.txt'), decryptedData);" >> decrypt.js
+            sed -i 's/^/export /' ~/project/decrypted_secrets.txt
+            sed -i 's/^/export /' ~/project/environment_variables.txt
 
-            # Run the JavaScript script
-            node decrypt.js
-
-            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > /home/circleci/project/environment_variables.txt
-
-            sed -i 's/^/export /' /home/circleci/project/decrypted_secrets.txt
-            sed -i 's/^/export /' /home/circleci/project/environment_variables.txt
-
-            source /home/circleci/project/decrypted_secrets.txt
-            source /home/circleci/project/environment_variables.txt
+            source ~/project/decrypted_secrets.txt
+            source ~/project/environment_variables.txt
 
       - when:
           condition:
@@ -126,15 +133,7 @@ jobs:
                     echo "Decrypting GITHUB_ACCESS_TOKEN..."
                     ENCRYPTED_TOKEN="<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>"
                     
-                    echo "const forge = require('node-forge');" > decrypt_token.js
-                    echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt_token.js
-                    echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt_token.js
-                    echo "const encryptedToken = forge.util.decode64('$ENCRYPTED_TOKEN');" >> decrypt_token.js
-                    echo "const decryptedToken = privateKey.decrypt(encryptedToken, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt_token.js
-                    echo "console.log(decryptedToken);" >> decrypt_token.js
-
-                    DECRYPTED_TOKEN=$(node decrypt_token.js)
-                    rm decrypt_token.js
+                    DECRYPTED_TOKEN=$(node ~/project/decrypt.js "$ENCRYPTED_TOKEN")
 
                     if [ -n "$DECRYPTED_TOKEN" ]; then
                       echo "GITHUB_ACCESS_TOKEN has been decrypted successfully."
@@ -151,6 +150,7 @@ jobs:
 
                   # Clear the decrypted token from memory
                   DECRYPTED_TOKEN=""
+
             - run:
                 name: Run build command
                 working_directory: ~/project/repository
