@@ -176,9 +176,9 @@ jobs:
           name: Check for index.html
           working_directory: ~/project/repository
           command: |
-            OUTPUT_DIR="${<< pipeline.parameters.OUTPUT_DIR >>:-}"
-            if [ -z "$OUTPUT_DIR" ]; then
-              OUTPUT_DIR="."
+            OUTPUT_DIR=.
+            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
             fi
             if [ -f "$OUTPUT_DIR/index.html" ]; then
               echo "index.html found in $OUTPUT_DIR"
