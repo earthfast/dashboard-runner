@@ -1,92 +1,114 @@
 version: 2.1
 
 parameters:
-  SOURCE_TYPE:
+  BUILD_COMMAND:
     type: string
-    default: "github"
-  S3_URL:
-    type: string
-    default: ""
-  REPOSITORY:
-    type: string
-    default: "https://github.com/thales-markets/thales-sport-markets"
-  REF:
-    type: string
-    default: ""
+    default: "npm run build"
   BUILD_DIR:
+    type: string
+    default: ""
+  ENVIRONMENT:
+    type: string
+    default: "default"
+    enum: ["default", "development", "staging", "sepolia-staging"]
+  ENVIRONMENT_VARIABLES:
+    type: string
+    default: ""
+  GITHUB_ACCESS_TOKEN:
+    type: string
+    default: ""
+  NODE_VERSION:
+    type: string
+    default: "22.4.1"
+  ONE_CLICK_SERVER_URL:
+    type: string
+    default: ""
+  OUTPUT_DIR:
     type: string
     default: ""
   PACKAGE_INSTALL_COMMAND:
     type: string
     default: "export NODE_OPTIONS=--openssl-legacy-provider && npm install"
-  BUILD_COMMAND:
-    type: string
-    default: "npm run build"
-  OUTPUT_DIR:
+  REF:
     type: string
     default: ""
-  ONE_CLICK_SERVER_URL:
+  REPOSITORY:
+    type: string
+    default: "https://github.com/thales-markets/thales-sport-markets"
+  S3_URL:
     type: string
     default: ""
-  ENVIRONMENT_VARIABLES:
-    type: string
-    default: ""  # Base64 encoded
-  ENVIRONMENT:
-    type: string
-    default: "default"
-    enum: ["default", "development", "staging", "sepolia-staging"]
-  GITHUB_ACCESS_TOKEN:
+  SECRETS:
     type: string
     default: ""
+  SOURCE_TYPE:
+    type: string
+    default: "github"
 
 jobs:
   publish:
     docker:
-      - image: cimg/node:22.4.1
+      - image: cimg/base:stable
     steps:
       - run:
-          name: Install dependencies
+          name: Install AWS CLI
           command: |
-            sudo apt-get update && sudo apt-get install -y awscli
-            npm install node-forge
+            if ! command -v aws &> /dev/null; then
+              sudo apt-get update && sudo apt-get install -y awscli
+            fi
+
       - run:
-          name: Decode environment variables
+          name: Install NVM and Node.js
           command: |
-            # echo "Decoding environment variables..."
-            # echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/encrypted_data.txt
+            if [ ! -d "$HOME/.nvm" ]; then
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            fi
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install << pipeline.parameters.NODE_VERSION >>
+            nvm use << pipeline.parameters.NODE_VERSION >>
+            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
-            # # Create a JavaScript script to decrypt the environment variables
-            # echo "const forge = require('node-forge');" > decrypt.js
-            # echo "const fs = require('fs');" >> decrypt.js
-            # echo "const path = require('path');" >> decrypt.js
-            # echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt.js
-            # echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt.js
-            # echo "const encryptedData = fs.readFileSync(path.join('/home/circleci/project/encrypted_data.txt'), 'utf8');" >> decrypt.js
-            # echo "const decodedData = forge.util.decode64(encryptedData);" >> decrypt.js
-            # echo "const decryptedData = privateKey.decrypt(decodedData, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt.js
-            # echo "fs.writeFileSync(path.join('/home/circleci/project/decrypted_env.txt'), decryptedData);" >> decrypt.js
+      - run:
+          name: Install Dependencies
+          command: |
+            npm install node-forge
 
-            # # Run the JavaScript script
-            # node decrypt.js
+      - run:
+          name: Create Decryption Script
+          command: |
+            echo "const forge = require('node-forge');" > ~/project/decrypt.js
+            echo "const fs = require('fs');" >> ~/project/decrypt.js
+            echo "" >> ~/project/decrypt.js
+            echo "function decryptData(encryptedData) {" >> ~/project/decrypt.js
+            echo "  const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> ~/project/decrypt.js
+            echo "  const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> ~/project/decrypt.js
+            echo "  const decodedData = forge.util.decode64(encryptedData);" >> ~/project/decrypt.js
+            echo "  return privateKey.decrypt(decodedData, 'RSA-OAEP', {" >> ~/project/decrypt.js
+            echo "    md: forge.md.sha256.create()," >> ~/project/decrypt.js
+            echo "    mgf1: { md: forge.md.sha1.create() }" >> ~/project/decrypt.js
+            echo "  });" >> ~/project/decrypt.js
+            echo "}" >> ~/project/decrypt.js
+            echo "" >> ~/project/decrypt.js
+            echo "const encryptedData = process.argv[2];" >> ~/project/decrypt.js
+            echo "console.log(decryptData(encryptedData));" >> ~/project/decrypt.js
 
-            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > /home/circleci/project/decrypted_env.txt
-            sed -i 's/^/export /' /home/circleci/project/decrypted_env.txt
+      - run:
+          name: Decode secrets and environment variables
+          command: |
+            if [ -n "<< pipeline.parameters.SECRETS >>" ]; then
+              echo "Decoding secrets..."
+              node ~/project/decrypt.js "<< pipeline.parameters.SECRETS >>" > ~/project/decrypted_secrets.txt
+              sed -i 's/^/export /' ~/project/decrypted_secrets.txt
+              source ~/project/decrypted_secrets.txt
+            fi
 
-            echo "Environment variables after sourcing:"
-            source /home/circleci/project/decrypted_env.txt
-            env
-
-            # Log parameter values
-            echo "Source type: << pipeline.parameters.SOURCE_TYPE >>"
-            echo "S3 URL: << pipeline.parameters.S3_URL >>"
-            echo "Repository: << pipeline.parameters.REPOSITORY >>"
-            echo "Reference: << pipeline.parameters.REF >>"
-            echo "Build directory: << pipeline.parameters.BUILD_DIR >>"
-            echo "Package install command: << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-            echo "Build command: << pipeline.parameters.BUILD_COMMAND >>"
-            echo "Output directory: << pipeline.parameters.OUTPUT_DIR >>"
-            echo "One click server URL: << pipeline.parameters.ONE_CLICK_SERVER_URL >>"
-            echo "Environment: << pipeline.parameters.ENVIRONMENT >>"
+            if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
+              echo "Processing environment variables..."
+              echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" | sed 's/^/export /' > ~/project/environment_variables.txt
+              source ~/project/environment_variables.txt
+            fi
 
       - when:
           condition:
@@ -95,73 +117,28 @@ jobs:
               - equal: ["<< pipeline.parameters.SOURCE_TYPE >>", "github"]
           steps:
             - run:
-                name: Decrypt GITHUB_ACCESS_TOKEN and Clone Repository
+                name: Clone Repository
                 command: |
                   REPO_URL="<< pipeline.parameters.REPOSITORY >>"
                   REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
-                  
-                  echo "Debugging information:"
-                  echo "REPO_URL: $REPO_URL"
-                  echo "REPO_PATH: $REPO_PATH"
-                  echo "GITHUB_ACCESS_TOKEN parameter is set: $([[ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ]] && echo 'Yes' || echo 'No')"
-                  echo "BASE64_ENCODED_PRIVATE_KEY is set: $([[ -n "$BASE64_ENCODED_PRIVATE_KEY" ]] && echo 'Yes' || echo 'No')"
 
                   if [ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ] && [ -n "$BASE64_ENCODED_PRIVATE_KEY" ]; then
-                    echo "Decrypting GITHUB_ACCESS_TOKEN..."
                     ENCRYPTED_TOKEN="<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>"
-                    
-                    echo "const forge = require('node-forge');" > decrypt_token.js
-                    echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt_token.js
-                    echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt_token.js
-                    echo "const encryptedToken = forge.util.decode64('$ENCRYPTED_TOKEN');" >> decrypt_token.js
-                    echo "const decryptedToken = privateKey.decrypt(encryptedToken, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt_token.js
-                    echo "console.log(decryptedToken);" >> decrypt_token.js
-
-                    DECRYPTED_TOKEN=$(node decrypt_token.js)
-                    rm decrypt_token.js
-
-                    if [ -n "$DECRYPTED_TOKEN" ]; then
-                      echo "GITHUB_ACCESS_TOKEN has been decrypted successfully."
-                      echo "Cloning with token..."
-                      git clone "https://$DECRYPTED_TOKEN@github.com/${REPO_PATH}" ~/project/repository
-                    else
-                      echo "Error: Failed to decrypt GITHUB_ACCESS_TOKEN."
-                      exit 1
-                    fi
+                    DECRYPTED_TOKEN=$(node ~/project/decrypt.js "$ENCRYPTED_TOKEN")
+                    git clone "https://$DECRYPTED_TOKEN@github.com/${REPO_PATH}" ~/project/repository
+                    unset DECRYPTED_TOKEN
                   else
-                    echo "GITHUB_ACCESS_TOKEN or BASE64_ENCODED_PRIVATE_KEY is missing. Cloning without token..."
                     git clone "$REPO_URL" ~/project/repository
                   fi
 
-                  # Clear the decrypted token from memory
-                  DECRYPTED_TOKEN=""
             - run:
-                name: Run build command
+                name: Build Project
                 working_directory: ~/project/repository
                 command: |
-                  set -e  # Ensure that the script fails if any command fails
-                  if [ -f ~/project/.env ]; then
-                    source ~/project/.env
-                  fi
-
-                  # Navigate to the build directory if specified
-                  if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
-                    echo "Changing to build directory: << pipeline.parameters.BUILD_DIR >>"
-                    cd "<< pipeline.parameters.BUILD_DIR >>"
-                  else
-                    echo "No build directory specified, staying in repository root."
-                  fi
-
-                  # Run package install command if specified
-                  if [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ]; then
-                    echo "Running package install command..."
-                    eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-                  else
-                    echo "No package install command specified."
-                  fi
-
-                  # Run build command
-                  echo "Running build command..."
+                  set -e
+                  [ -f ~/project/.env ] && source ~/project/.env
+                  [ -n "<< pipeline.parameters.BUILD_DIR >>" ] && cd "<< pipeline.parameters.BUILD_DIR >>"
+                  [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ] && eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
                   eval "<< pipeline.parameters.BUILD_COMMAND >>"
 
       - when:
@@ -199,11 +176,7 @@ jobs:
           name: Check for index.html
           working_directory: ~/project/repository
           command: |
-            OUTPUT_DIR=.
-            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
-            fi
-
+            OUTPUT_DIR=${<< pipeline.parameters.OUTPUT_DIR >>:-.}
             if [ -f "$OUTPUT_DIR/index.html" ]; then
               echo "index.html found in $OUTPUT_DIR"
             else
@@ -212,64 +185,56 @@ jobs:
             fi
 
       - run:
-          name: Create earthfast release
+          name: Create Earthfast Bundle
           working_directory: ~/project
           command: |
             OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
-            if [ -z "$OUTPUT_DIR" ] || [ "$OUTPUT_DIR" = "." ]; then
-              BUNDLE_PATH="repository"
-            else
-              BUNDLE_PATH="repository/$OUTPUT_DIR"
-            fi
+            BUNDLE_PATH="${OUTPUT_DIR:+repository/$OUTPUT_DIR}"
+            BUNDLE_PATH="${BUNDLE_PATH:-repository}"
 
-            echo "Creating bundle from path: $BUNDLE_PATH"
             bundle_filename="$(npx --package=earthfast-cli@0.7.1 --yes earthfast bundle create earthfast-bundle "$BUNDLE_PATH")"
-
             checksum="$(npx --package=earthfast-cli@0.7.1 --yes earthfast bundle checksum $bundle_filename)"
 
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
 
-      # store artifacts in circleci for download
       - store_artifacts:
           path: earthfast-bundle.tgz
       - store_artifacts:
           path: ~/project/repository/checksum
+
       - run:
-          name: Notify one click server of the outcome
+          name: Notify One Click Server
           when: always
           command: |
             ONE_CLICK_SERVER_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>"
             PIPELINE_ID="<< pipeline.id >>"
-
-            BUNDLE_URL=""
-            CHECKSUM=""
-            STATUS="failure"
-
             CHECKSUM_PATH="$HOME/project/repository/checksum"
+
             if [ -f "$CHECKSUM_PATH" ]; then
               CHECKSUM=$(cat "$CHECKSUM_PATH")
               STATUS="success"
               BUNDLE_URL="https://output.circle-artifacts.com/output/job/${CIRCLE_WORKFLOW_JOB_ID}/artifacts/${CIRCLE_NODE_INDEX}/earthfast-bundle.tgz"
             else
-              echo "Checksum file not found at $CHECKSUM_PATH"
+              STATUS="failure"
             fi
 
-            echo "Bundle URL: $BUNDLE_URL"
-            echo "Pipeline ID: $PIPELINE_ID"
-            echo "Checksum: $CHECKSUM"
-            echo "Status: $STATUS"
-            echo "One Click Server URL: $ONE_CLICK_SERVER_URL"
-
-            DATA='{"checksum":"'"$CHECKSUM"'","bundleUrl":"'"$BUNDLE_URL"'","pipelineId":"'"$PIPELINE_ID"'","status":"'"$STATUS"'"}'
-            echo "Data Payload: $DATA"
+            DATA=$(jq -n \
+              --arg checksum "$CHECKSUM" \
+              --arg bundleUrl "$BUNDLE_URL" \
+              --arg pipelineId "$PIPELINE_ID" \
+              --arg status "$STATUS" \
+              '{checksum: $checksum, bundleUrl: $bundleUrl, pipelineId: $pipelineId, status: $status}')
 
             SIGNATURE=$(echo -n "$DATA" | openssl dgst -sha256 -hmac "$CIRCLECI_WEBHOOK_SECRET" | sed 's/^.* //')
             FULL_URL="${ONE_CLICK_SERVER_URL}/circleci/notify"
-            echo "Full URL: $FULL_URL"
 
-            curl -X POST -H "Content-Type: application/json" -H "x-circleci-signature: $SIGNATURE" -d "$DATA" "$FULL_URL"
+            curl -X POST \
+              -H "Content-Type: application/json" \
+              -H "x-circleci-signature: $SIGNATURE" \
+              -d "$DATA" \
+              "$FULL_URL"
 
 workflows:
   version: 2
