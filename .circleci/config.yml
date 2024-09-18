@@ -223,12 +223,7 @@ jobs:
               STATUS="failure"
             fi
 
-            DATA=$(jq -n \
-              --arg checksum "$CHECKSUM" \
-              --arg bundleUrl "$BUNDLE_URL" \
-              --arg pipelineId "$PIPELINE_ID" \
-              --arg status "$STATUS" \
-              '{checksum: $checksum, bundleUrl: $bundleUrl, pipelineId: $pipelineId, status: $status}')
+            DATA='{"checksum":"'"$CHECKSUM"'","bundleUrl":"'"$BUNDLE_URL"'","pipelineId":"'"$PIPELINE_ID"'","status":"'"$STATUS"'"}'
 
             SIGNATURE=$(echo -n "$DATA" | openssl dgst -sha256 -hmac "$CIRCLECI_WEBHOOK_SECRET" | sed 's/^.* //')
             FULL_URL="${ONE_CLICK_SERVER_URL}/circleci/notify"
