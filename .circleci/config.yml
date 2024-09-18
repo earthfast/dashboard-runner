@@ -95,19 +95,26 @@ jobs:
             echo "console.log(decryptData(encryptedData));" >> ~/project/decrypt.js
 
       - run:
-          name: Decode secrets
+          name: Decode secrets and environment variables
           command: |
-            echo "Decoding secrets..."
-            echo "<< pipeline.parameters.SECRETS >>" > ~/project/encrypted_data.txt
-            node ~/project/decrypt.js "$(cat ~/project/encrypted_data.txt)" > ~/project/decrypted_secrets.txt
-            
-            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/environment_variables.txt
+            if [ -n "<< pipeline.parameters.SECRETS >>" ]; then
+              echo "Decoding secrets..."
+              echo "<< pipeline.parameters.SECRETS >>" > ~/project/encrypted_data.txt
+              node ~/project/decrypt.js "$(cat ~/project/encrypted_data.txt)" > ~/project/decrypted_secrets.txt
+              sed -i 's/^/export /' ~/project/decrypted_secrets.txt
+              source ~/project/decrypted_secrets.txt
+            else
+              echo "No secrets to decode."
+            fi
 
-            sed -i 's/^/export /' ~/project/decrypted_secrets.txt
-            sed -i 's/^/export /' ~/project/environment_variables.txt
-
-            source ~/project/decrypted_secrets.txt
-            source ~/project/environment_variables.txt
+            if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
+              echo "Processing environment variables..."
+              echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/environment_variables.txt
+              sed -i 's/^/export /' ~/project/environment_variables.txt
+              source ~/project/environment_variables.txt
+            else
+              echo "No environment variables to process."
+            fi
 
       - when:
           condition:
@@ -120,17 +127,10 @@ jobs:
                 command: |
                   REPO_URL="<< pipeline.parameters.REPOSITORY >>"
                   REPO_PATH=$(echo $REPO_URL | sed 's#https://github.com/##')
-                  
-                  echo "Debugging information:"
-                  echo "REPO_URL: $REPO_URL"
-                  echo "REPO_PATH: $REPO_PATH"
-                  echo "GITHUB_ACCESS_TOKEN parameter is set: $([[ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ]] && echo 'Yes' || echo 'No')"
-                  echo "BASE64_ENCODED_PRIVATE_KEY is set: $([[ -n "$BASE64_ENCODED_PRIVATE_KEY" ]] && echo 'Yes' || echo 'No')"
 
                   if [ -n "<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>" ] && [ -n "$BASE64_ENCODED_PRIVATE_KEY" ]; then
                     echo "Decrypting GITHUB_ACCESS_TOKEN..."
                     ENCRYPTED_TOKEN="<< pipeline.parameters.GITHUB_ACCESS_TOKEN >>"
-                    
                     DECRYPTED_TOKEN=$(node ~/project/decrypt.js "$ENCRYPTED_TOKEN")
 
                     if [ -n "$DECRYPTED_TOKEN" ]; then
