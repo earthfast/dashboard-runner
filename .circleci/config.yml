@@ -49,10 +49,7 @@ jobs:
   publish:
     docker:
       - image: cimg/base:stable
-    steps:
-      - restore_cache:
-          keys:
-            - nvm-v1-{{ checksum "<<pipeline.parameters.NODE_VERSION>>" }}
+
       - run:
           name: Install NVM and Node.js
           command: |
@@ -65,24 +62,13 @@ jobs:
             nvm use << pipeline.parameters.NODE_VERSION >>
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
-      - save_cache:
-          paths:
-            - ~/.nvm
-          key: nvm-v1-{{ checksum "<<pipeline.parameters.NODE_VERSION>>" }}
 
-      - restore_cache:
-          keys:
-            - awscli-v1-{{ checksum "/usr/local/bin/aws" }}
       - run:
           name: Install AWS CLI
           command: |
             if [ ! -f "/usr/local/bin/aws" ]; then
               sudo apt-get update && sudo apt-get install -y awscli
             fi
-      - save_cache:
-          paths:
-            - /usr/local/bin/aws
-          key: awscli-v1-{{ checksum "/usr/local/bin/aws" }}
 
       - run:
           name: Print Node.js version
