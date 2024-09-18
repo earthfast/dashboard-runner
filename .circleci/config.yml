@@ -78,23 +78,21 @@ jobs:
       - run:
           name: Create Decryption Script
           command: |
-            cat << EOF > ~/project/decrypt.js
-            const forge = require('node-forge');
-            const fs = require('fs');
-
-            function decryptData(encryptedData) {
-              const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');
-              const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
-              const decodedData = forge.util.decode64(encryptedData);
-              return privateKey.decrypt(decodedData, 'RSA-OAEP', {
-                md: forge.md.sha256.create(),
-                mgf1: { md: forge.md.sha1.create() }
-              });
-            }
-
-            const encryptedData = process.argv[2];
-            console.log(decryptData(encryptedData));
-            EOF
+            echo "const forge = require('node-forge');" > ~/project/decrypt.js
+            echo "const fs = require('fs');" >> ~/project/decrypt.js
+            echo "" >> ~/project/decrypt.js
+            echo "function decryptData(encryptedData) {" >> ~/project/decrypt.js
+            echo "  const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> ~/project/decrypt.js
+            echo "  const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> ~/project/decrypt.js
+            echo "  const decodedData = forge.util.decode64(encryptedData);" >> ~/project/decrypt.js
+            echo "  return privateKey.decrypt(decodedData, 'RSA-OAEP', {" >> ~/project/decrypt.js
+            echo "    md: forge.md.sha256.create()," >> ~/project/decrypt.js
+            echo "    mgf1: { md: forge.md.sha1.create() }" >> ~/project/decrypt.js
+            echo "  });" >> ~/project/decrypt.js
+            echo "}" >> ~/project/decrypt.js
+            echo "" >> ~/project/decrypt.js
+            echo "const encryptedData = process.argv[2];" >> ~/project/decrypt.js
+            echo "console.log(decryptData(encryptedData));" >> ~/project/decrypt.js
 
       - run:
           name: Decode secrets
