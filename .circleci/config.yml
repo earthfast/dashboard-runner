@@ -30,7 +30,7 @@ parameters:
     default: ""
   ENVIRONMENT_VARIABLES:
     type: string
-    default: ""  # Base64 encoded
+    default: ""
   ENVIRONMENT:
     type: string
     default: "default"
@@ -45,8 +45,23 @@ parameters:
 jobs:
   publish:
     docker:
-      - image: cimg/node:<< pipeline.parameters.NODE_VERSION >>
+      - image: cimg/base:stable
     steps:
+      - run:
+          name: Install NVM and Node.js
+          command: |
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install << pipeline.parameters.NODE_VERSION >>
+            nvm use << pipeline.parameters.NODE_VERSION >>
+            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - run:
+          name: Print Node.js version
+          command: |
+            node --version
+            npm --version
       - run:
           name: Install dependencies
           command: |
