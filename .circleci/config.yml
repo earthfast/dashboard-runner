@@ -135,24 +135,14 @@ jobs:
             # Run the JavaScript script
             node decrypt.js
 
-            echo "<< pipeline.parameters.SECRETS >>" > /home/circleci/project/decrypted_secrets.txt
             sed -i 's/^/export /' /home/circleci/project/decrypted_secrets.txt
 
-            echo "Secrets after sourcing:"
-            source /home/circleci/project/decrypted_secrets.txt
-            env
 
-            # Log parameter values
-            echo "Source type: << pipeline.parameters.SOURCE_TYPE >>"
-            echo "S3 URL: << pipeline.parameters.S3_URL >>"
-            echo "Repository: << pipeline.parameters.REPOSITORY >>"
-            echo "Reference: << pipeline.parameters.REF >>"
-            echo "Build directory: << pipeline.parameters.BUILD_DIR >>"
-            echo "Package install command: << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-            echo "Build command: << pipeline.parameters.BUILD_COMMAND >>"
-            echo "Output directory: << pipeline.parameters.OUTPUT_DIR >>"
-            echo "One click server URL: << pipeline.parameters.ONE_CLICK_SERVER_URL >>"
-            echo "Environment: << pipeline.parameters.ENVIRONMENT >>"
+            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > /home/circleci/project/environment_variables.txt
+            sed -i 's/^/export /' /home/circleci/project/environment_variables.txt
+
+            source /home/circleci/project/decrypted_secrets.txt
+            source /home/circleci/project/environment_variables.txt
 
       - when:
           condition:
