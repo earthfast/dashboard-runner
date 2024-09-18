@@ -31,6 +31,9 @@ parameters:
   ENVIRONMENT_VARIABLES:
     type: string
     default: ""
+  SECRETS:
+    type: string
+    default: ""
   ENVIRONMENT:
     type: string
     default: "default"
@@ -47,52 +50,96 @@ jobs:
     docker:
       - image: cimg/base:stable
     steps:
+      - restore_cache:
+          keys:
+            - source-v1-{{ .Branch }}-{{ .Revision }}
+            - source-v1-{{ .Branch }}-
+            - source-v1-
+      - checkout
+      - save_cache:
+          paths:
+            - ".git"
+          key: source-v1-{{ .Branch }}-{{ .Revision }}
+
+      - restore_cache:
+          keys:
+            - nvm-{{ checksum ".nvmrc" }}
       - run:
           name: Install NVM and Node.js
           command: |
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            if [ ! -d "$HOME/.nvm" ]; then
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            fi
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             nvm install << pipeline.parameters.NODE_VERSION >>
             nvm use << pipeline.parameters.NODE_VERSION >>
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - save_cache:
+          paths:
+            - ~/.nvm
+          key: nvm-{{ checksum ".nvmrc" }}
+
       - run:
           name: Print Node.js version
           command: |
             node --version
             npm --version
+
+      - restore_cache:
+          keys:
+            - npm-packages-{{ checksum "package-lock.json" }}
       - run:
           name: Install dependencies
           command: |
-            sudo apt-get update && sudo apt-get install -y awscli
             npm install -g npm@latest
+            npm ci
             npm install node-forge
+      - save_cache:
+          paths:
+            - ~/.npm
+          key: npm-packages-{{ checksum "package-lock.json" }}
+
+      - restore_cache:
+          keys:
+            - awscli-{{ checksum "/usr/local/bin/aws" }}
       - run:
-          name: Decode environment variables
+          name: Install AWS CLI
           command: |
-            # echo "Decoding environment variables..."
-            # echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/encrypted_data.txt
+            if [ ! -f "/usr/local/bin/aws" ]; then
+              sudo apt-get update && sudo apt-get install -y awscli
+            fi
+      - save_cache:
+          paths:
+            - /usr/local/bin/aws
+          key: awscli-{{ checksum "/usr/local/bin/aws" }}
 
-            # # Create a JavaScript script to decrypt the environment variables
-            # echo "const forge = require('node-forge');" > decrypt.js
-            # echo "const fs = require('fs');" >> decrypt.js
-            # echo "const path = require('path');" >> decrypt.js
-            # echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt.js
-            # echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt.js
-            # echo "const encryptedData = fs.readFileSync(path.join('/home/circleci/project/encrypted_data.txt'), 'utf8');" >> decrypt.js
-            # echo "const decodedData = forge.util.decode64(encryptedData);" >> decrypt.js
-            # echo "const decryptedData = privateKey.decrypt(decodedData, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt.js
-            # echo "fs.writeFileSync(path.join('/home/circleci/project/decrypted_env.txt'), decryptedData);" >> decrypt.js
+      - run:
+          name: Decode secrets
+          command: |
+            echo "Decoding secrets..."
+            echo "<< pipeline.parameters.SECRETS >>" > ~/project/encrypted_data.txt
 
-            # # Run the JavaScript script
-            # node decrypt.js
+            # Create a JavaScript script to decrypt the secrets
+            echo "const forge = require('node-forge');" > decrypt.js
+            echo "const fs = require('fs');" >> decrypt.js
+            echo "const path = require('path');" >> decrypt.js
+            echo "const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> decrypt.js
+            echo "const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> decrypt.js
+            echo "const encryptedData = fs.readFileSync(path.join('/home/circleci/project/encrypted_data.txt'), 'utf8');" >> decrypt.js
+            echo "const decodedData = forge.util.decode64(encryptedData);" >> decrypt.js
+            echo "const decryptedData = privateKey.decrypt(decodedData, 'RSA-OAEP', { md: forge.md.sha256.create(), mgf1: { md: forge.md.sha1.create() } });" >> decrypt.js
+            echo "fs.writeFileSync(path.join('/home/circleci/project/decrypted_secrets.txt'), decryptedData);" >> decrypt.js
 
-            echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > /home/circleci/project/decrypted_env.txt
-            sed -i 's/^/export /' /home/circleci/project/decrypted_env.txt
+            # Run the JavaScript script
+            node decrypt.js
 
-            echo "Environment variables after sourcing:"
-            source /home/circleci/project/decrypted_env.txt
+            echo "<< pipeline.parameters.SECRETS >>" > /home/circleci/project/decrypted_secrets.txt
+            sed -i 's/^/export /' /home/circleci/project/decrypted_secrets.txt
+
+            echo "Secrets after sourcing:"
+            source /home/circleci/project/decrypted_secrets.txt
             env
 
             # Log parameter values
