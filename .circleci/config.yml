@@ -131,6 +131,13 @@ jobs:
                     git clone "$REPO_URL" ~/project/repository
                   fi
 
+                  cd ~/project/repository
+                  if [ -n "<< pipeline.parameters.REF >>" ]; then
+                    git checkout "<< pipeline.parameters.REF >>"
+                  else
+                    echo "No branch specified, staying on default branch."
+                  fi
+
             - run:
                 name: Build Project
                 working_directory: ~/project/repository
