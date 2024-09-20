@@ -1,0 +1,46 @@
+# This workflow mirrors the public repository to a private repository
+# copies all branches and tags from the public repository to the private repository
+name: Mirror to Private Repository
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - dm-mirror-private-repo-2
+  workflow_dispatch:  # Keeps manual triggering option
+
+jobs:
+  mirror_repository:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for all branches and tags
+
+    - name: Push to private repository
+      env:
+        GH_TOKEN: ${{ secrets.GH_PAT }}
+        TARGET_PRIVATE_MIRROR_REPO: ${{ secrets.TARGET_PRIVATE_MIRROR_REPO }}
+      run: |
+        # Configure Git
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+
+        if [ -z "$GH_TOKEN" ]; then
+          echo "Error: GH_PAT is not set"
+          exit 1
+        fi
+
+        # Clone the source repository
+        git clone --mirror https://${GH_TOKEN}@github.com/earthfast/dashboard-runner.git source-repo
+        cd source-repo
+
+        # Push branches to the private repository
+        git push --prune https://${GH_TOKEN}@github.com/${TARGET_PRIVATE_MIRROR_REPO}.git +refs/heads/*:refs/heads/*
+
+        # Push tags to the private repository
+        git push --prune https://${GH_TOKEN}@github.com/${TARGET_PRIVATE_MIRROR_REPO}.git +refs/tags/*:refs/tags/*
+
+        echo "Repository mirrored successfully!"
