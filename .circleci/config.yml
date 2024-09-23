@@ -48,7 +48,6 @@ parameters:
     type: boolean
     default: true
 
-
 jobs:
   publish:
     docker:
@@ -167,15 +166,42 @@ jobs:
                     echo "No branch specified, staying on default branch."
                   fi
 
+            - setup_remote_docker:
+                version: docker.io/docker:stable
+
             - run:
-                name: Build Project
-                working_directory: ~/project/repository
+                name: Prepare Build Environment
                 command: |
-                  set -e
-                  [ -f ~/project/.env ] && source ~/project/.env
-                  [ -n "<< pipeline.parameters.BUILD_DIR >>" ] && cd "<< pipeline.parameters.BUILD_DIR >>"
-                  [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ] && eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
-                  eval "<< pipeline.parameters.BUILD_COMMAND >>"
+                  cat << EOF > Dockerfile
+                  FROM node:<< pipeline.parameters.NODE_VERSION >>-slim
+                  WORKDIR /app
+                  RUN apt-get update && apt-get install -y make gcc g++ python
+                  # Add any other necessary build tools here
+                  EOF
+                  docker build -t build-env .
+
+            - run:
+                name: Run Build in Controlled Environment
+                command: |
+                  # Prepare environment variable file
+                  touch env_vars.list
+                  [ -f ~/project/decrypted_secrets.txt ] && cat ~/project/decrypted_secrets.txt >> env_vars.list
+                  [ -f ~/project/environment_variables.txt ] && cat ~/project/environment_variables.txt >> env_vars.list
+
+                  # Run the build command in the controlled environment
+                  docker run --rm \
+                    --env-file env_vars.list \
+                    -v ~/project/repository:/app \
+                    -w /app<< pipeline.parameters.BUILD_DIR >> \
+                    --memory=4g \
+                    --cpus=2 \
+                    --network host \
+                    build-env \
+                    /bin/sh -c '
+                      set -e
+                      << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>
+                      timeout 30m << pipeline.parameters.BUILD_COMMAND >>
+                    '
 
       - when:
           condition:
