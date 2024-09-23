@@ -44,24 +44,24 @@ parameters:
   SOURCE_TYPE:
     type: string
     default: "github"
-  # CI_TRIGGER:
-  #   type: boolean
-  #   default: false
+  CI_TRIGGER:
+    type: boolean
+    default: true
 
 jobs:
   publish:
     docker:
       - image: cimg/base:stable
     steps:
-      # - run:
-      #     name: Check CI_TRIGGER
-      #     command: |
-      #       if [ "<< pipeline.parameters.CI_TRIGGER >>" != true ]; then
-      #         echo "CI_TRIGGER is not true. Exiting with success."
-      #         circleci-agent step halt
-      #       else
-      #         echo "CI_TRIGGER is true. Continuing with the workflow."
-      #       fi
+      - run:
+          name: Check CI_TRIGGER
+          command: |
+            if [ "<< pipeline.parameters.CI_TRIGGER >>" != true ]; then
+              echo "CI_TRIGGER is not true. Exiting with success."
+              circleci-agent step halt
+            else
+              echo "CI_TRIGGER is true. Continuing with the workflow."
+            fi
 
       - run:
           name: Install AWS CLI
