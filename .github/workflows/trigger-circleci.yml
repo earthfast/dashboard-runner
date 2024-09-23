@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - dev
-      - dm-add-ci-trigger
 
 jobs:
   trigger-circleci:
@@ -30,7 +29,7 @@ jobs:
           REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
           if [ "$REPO_NAME" != "dashboard-runner" ]; then
             echo "This action is only allowed to run in the earthfast/dashboard-runner repository."
-            exit 1
+            exit 0
           fi
 
       - name: Trigger CircleCI Pipeline
@@ -39,7 +38,7 @@ jobs:
             -H "Circle-Token: ${{ secrets.CIRCLECI_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "branch": "dm-add-ci-trigger",
+              "branch": "${{ steps.env-branch.outputs.branch }}",
               "parameters": {
                 "SOURCE_TYPE": "github",
                 "S3_URL": "",

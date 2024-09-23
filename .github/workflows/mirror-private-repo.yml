@@ -36,7 +36,7 @@ jobs:
         REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
         if [ "$REPO_NAME" != "dashboard-runner" ]; then
           echo "This action is only allowed to run in the dashboard-runner repository."
-          exit 1
+          exit 0
         fi
 
         # Clone the source repository
