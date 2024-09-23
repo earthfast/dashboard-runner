@@ -45,8 +45,8 @@ parameters:
     type: string
     default: "github"
   CI_TRIGGER:
-    type: boolean
-    default: false
+    type: string
+    default: "false"
 
 jobs:
   publish:
@@ -56,7 +56,7 @@ jobs:
       - run:
           name: Check CI_TRIGGER
           command: |
-            if [ "<< pipeline.parameters.CI_TRIGGER >>" != true ]; then
+            if [ "<< pipeline.parameters.CI_TRIGGER >>" != "true" ]; then
               echo "CI_TRIGGER is not true. Exiting with success."
               circleci-agent step halt
             else
