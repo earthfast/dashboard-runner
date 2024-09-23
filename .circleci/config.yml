@@ -166,8 +166,7 @@ jobs:
                     echo "No branch specified, staying on default branch."
                   fi
 
-            - setup_remote_docker:
-                version: docker.io/docker:stable
+            - setup_remote_docker
 
             - run:
                 name: Prepare Build Environment
