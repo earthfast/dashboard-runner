@@ -124,19 +124,20 @@ jobs:
               echo "Decoding secrets..."
               DECRYPTED_JSON=$(node ~/project/decrypt.js '<< pipeline.parameters.SECRETS >>')
               if [[ $DECRYPTED_JSON == {* ]]; then
-                echo "$DECRYPTED_JSON" | jq -r 'to_entries | map("export \(.key)=\(.value|@sh)") | .[]' > ~/project/decrypted_secrets.txt
+                echo "$DECRYPTED_JSON" | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > ~/project/decrypted_secrets.txt
               else
-                echo "export DECRYPTED_SECRET=$DECRYPTED_JSON" > ~/project/decrypted_secrets.txt
+                echo "DECRYPTED_SECRET=$DECRYPTED_JSON" > ~/project/decrypted_secrets.txt
               fi
-              source ~/project/decrypted_secrets.txt
+              source <(sed 's/^/export /' ~/project/decrypted_secrets.txt)
               cat ~/project/decrypted_secrets.txt
             fi
 
             if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
               echo "Processing environment variables..."
-              echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" | sed 's/^/export /' > ~/project/environment_variables.txt
-              source ~/project/environment_variables.txt
+              echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/environment_variables.txt
+              source <(sed 's/^/export /' ~/project/environment_variables.txt)
             fi
+            cat ~/project/decrypted_secrets.txt ~/project/environment_variables.txt > ~/project/combined_env_vars.txt
 
       - when:
           condition:
@@ -180,14 +181,8 @@ jobs:
             - run:
                 name: Run Build in Controlled Environment
                 command: |
-                  # Prepare environment variable file
-                  touch env_vars.list
-                  [ -f ~/project/decrypted_secrets.txt ] && cat ~/project/decrypted_secrets.txt >> env_vars.list
-                  [ -f ~/project/environment_variables.txt ] && cat ~/project/environment_variables.txt >> env_vars.list
-
-                  # Run the build command in the controlled environment
                   docker run --rm \
-                    --env-file env_vars.list \
+                    --env-file ~/project/combined_env_vars.txt \
                     -v ~/project/repository:/app \
                     -w "/app/<< pipeline.parameters.BUILD_DIR >>" \
                     --memory=4g \
