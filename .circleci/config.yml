@@ -120,6 +120,7 @@ jobs:
       - run:
           name: Decode secrets and environment variables
           command: |
+            touch ~/project/docker_env_vars.txt
             if [ -n "<< pipeline.parameters.SECRETS >>" ]; then
               echo "Decoding secrets..."
               DECRYPTED_JSON=$(node ~/project/decrypt.js '<< pipeline.parameters.SECRETS >>')
@@ -129,15 +130,15 @@ jobs:
                 echo "DECRYPTED_SECRET=$DECRYPTED_JSON" > ~/project/decrypted_secrets.txt
               fi
               source <(sed 's/^/export /' ~/project/decrypted_secrets.txt)
-              cat ~/project/decrypted_secrets.txt
+              cat ~/project/decrypted_secrets.txt >> ~/project/docker_env_vars.txt
             fi
 
             if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
               echo "Processing environment variables..."
               echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/environment_variables.txt
               source <(sed 's/^/export /' ~/project/environment_variables.txt)
+              cat ~/project/environment_variables.txt >> ~/project/docker_env_vars.txt
             fi
-            cat ~/project/decrypted_secrets.txt ~/project/environment_variables.txt > ~/project/combined_env_vars.txt
 
       - when:
           condition:
