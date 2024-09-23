@@ -91,17 +91,32 @@ jobs:
             echo "  });" >> ~/project/decrypt.js
             echo "}" >> ~/project/decrypt.js
             echo "" >> ~/project/decrypt.js
-            echo "const encryptedData = process.argv[2];" >> ~/project/decrypt.js
-            echo "console.log(decryptData(encryptedData));" >> ~/project/decrypt.js
+            echo "const input = process.argv[2];" >> ~/project/decrypt.js
+            echo "try {" >> ~/project/decrypt.js
+            echo "  const parsedJson = JSON.parse(input);" >> ~/project/decrypt.js
+            echo "  const decryptedJson = Object.keys(parsedJson).reduce((acc, key) => {" >> ~/project/decrypt.js
+            echo "    acc[key] = decryptData(parsedJson[key]);" >> ~/project/decrypt.js
+            echo "    return acc;" >> ~/project/decrypt.js
+            echo "  }, {});" >> ~/project/decrypt.js
+            echo "  console.log(JSON.stringify(decryptedJson));" >> ~/project/decrypt.js
+            echo "} catch (e) {" >> ~/project/decrypt.js
+            echo "  // If parsing fails, assume it's a single encrypted token" >> ~/project/decrypt.js
+            echo "  console.log(decryptData(input));" >> ~/project/decrypt.js
+            echo "}" >> ~/project/decrypt.js
 
       - run:
           name: Decode secrets and environment variables
           command: |
             if [ -n "<< pipeline.parameters.SECRETS >>" ]; then
               echo "Decoding secrets..."
-              node ~/project/decrypt.js "<< pipeline.parameters.SECRETS >>" > ~/project/decrypted_secrets.txt
-              sed -i 's/^/export /' ~/project/decrypted_secrets.txt
+              DECRYPTED_JSON=$(node ~/project/decrypt.js '<< pipeline.parameters.SECRETS >>')
+              if [[ $DECRYPTED_JSON == {* ]]; then
+                echo "$DECRYPTED_JSON" | jq -r 'to_entries | map("export \(.key)=\(.value|@sh)") | .[]' > ~/project/decrypted_secrets.txt
+              else
+                echo "export DECRYPTED_SECRET=$DECRYPTED_JSON" > ~/project/decrypted_secrets.txt
+              fi
               source ~/project/decrypted_secrets.txt
+              cat ~/project/decrypted_secrets.txt
             fi
 
             if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
