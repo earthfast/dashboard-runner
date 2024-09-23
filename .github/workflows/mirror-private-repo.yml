@@ -18,6 +18,14 @@ jobs:
       with:
         fetch-depth: 0  # Fetch all history for all branches and tags
 
+    - name: Ensure repository is dashboard-runner
+      run: |
+        REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
+        if [ "$REPO_NAME" != "dashboard-runner" ]; then
+          echo "This action is only allowed to run in the earthfast/dashboard-runner repository."
+          exit 0
+        fi
+
     - name: Push to private repository
       env:
         GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -30,13 +38,6 @@ jobs:
         if [ -z "$GH_TOKEN" ]; then
           echo "Error: GH_PAT is not set"
           exit 1
-        fi
-
-        # Ensure this is only run in the dashboard-runner repository
-        REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
-        if [ "$REPO_NAME" != "dashboard-runner" ]; then
-          echo "This action is only allowed to run in the dashboard-runner repository."
-          exit 0
         fi
 
         # Clone the source repository
