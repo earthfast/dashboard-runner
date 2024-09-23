@@ -171,11 +171,11 @@ jobs:
             - run:
                 name: Prepare Build Environment
                 command: |
-                  cat \<< EOF > Dockerfile
-                  FROM node:\<< pipeline.parameters.NODE_VERSION >>-slim
+                  NODE_VERSION="<< pipeline.parameters.NODE_VERSION >>"
+                  cat << EOF > Dockerfile
+                  FROM node:${NODE_VERSION}-slim
                   WORKDIR /app
                   RUN apt-get update && apt-get install -y make gcc g++ python
-                  # Add any other necessary build tools here
                   EOF
                   docker build -t build-env .
 
