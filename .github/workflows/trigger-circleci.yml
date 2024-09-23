@@ -31,7 +31,7 @@ jobs:
             -H "Circle-Token: ${{ secrets.CIRCLECI_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "branch": "${{ steps.env-branch.outputs.branch }}",
+              "branch": "dm-add-ci-trigger",
               "parameters": {
                 "SOURCE_TYPE": "github",
                 "S3_URL": "",
