@@ -189,7 +189,7 @@ jobs:
                   docker run --rm \
                     --env-file env_vars.list \
                     -v ~/project/repository:/app \
-                    -w /app<< pipeline.parameters.BUILD_DIR >> \
+                    -w "/app/<< pipeline.parameters.BUILD_DIR >>" \
                     --memory=4g \
                     --cpus=2 \
                     --network host \
