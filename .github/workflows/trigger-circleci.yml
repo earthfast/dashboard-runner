@@ -43,7 +43,7 @@ jobs:
                 "ENVIRONMENT_VARIABLES": "",
                 "ONE_CLICK_SERVER_URL": "https://jorge.ngrok.pro",
                 "ENVIRONMENT": "${{ steps.env-branch.outputs.environment }}",
-                "CI_TRIGGER": "true"
+                "CI_TRIGGER": true
               }
             }' \
             https://circleci.com/api/v2/project/gh/earthfast/dashboard-runner/pipeline
