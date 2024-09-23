@@ -171,11 +171,11 @@ jobs:
             - run:
                 name: Prepare Build Environment
                 command: |
-                  NODE_VERSION="<< pipeline.parameters.NODE_VERSION >>"
-                  cat << EOF > Dockerfile
-                  FROM node:${NODE_VERSION}-slim
+                  cat \<< EOF > Dockerfile
+                  FROM node:<< pipeline.parameters.NODE_VERSION >>-slim
                   WORKDIR /app
                   RUN apt-get update && apt-get install -y make gcc g++ python
+                  # Add any other necessary build tools here
                   EOF
                   docker build -t build-env .
 
@@ -198,8 +198,8 @@ jobs:
                     build-env \
                     /bin/sh -c '
                       set -e
-                      \<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>
-                      timeout 30m \<< pipeline.parameters.BUILD_COMMAND >>
+                      << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>
+                      timeout 30m << pipeline.parameters.BUILD_COMMAND >>
                     '
 
       - when:
