@@ -174,8 +174,6 @@ jobs:
                   cat \<< EOF > Dockerfile
                   FROM node:<< pipeline.parameters.NODE_VERSION >>-slim
                   WORKDIR /app
-                  RUN apt-get update && apt-get install -y make gcc g++ python
-                  # Add any other necessary build tools here
                   EOF
                   docker build -t build-env .
 
