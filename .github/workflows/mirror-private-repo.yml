@@ -32,6 +32,13 @@ jobs:
           exit 1
         fi
 
+        # Ensure this is only run in the dashboard-runner repository
+        REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
+        if [ "$REPO_NAME" != "dashboard-runner" ]; then
+          echo "This action is only allowed to run in the dashboard-runner repository."
+          exit 0
+        fi
+
         # Clone the source repository
         git clone --mirror https://${GH_TOKEN}@github.com/earthfast/dashboard-runner.git source-repo
         cd source-repo
