@@ -129,14 +129,12 @@ jobs:
               else
                 echo "DECRYPTED_SECRET=$DECRYPTED_JSON" > ~/project/decrypted_secrets.txt
               fi
-              source <(sed 's/^/export /' ~/project/decrypted_secrets.txt)
               cat ~/project/decrypted_secrets.txt >> ~/project/combined_env_vars.txt
             fi
 
             if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
               echo "Processing environment variables..."
               echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" > ~/project/environment_variables.txt
-              source <(sed 's/^/export /' ~/project/environment_variables.txt)
               cat ~/project/environment_variables.txt >> ~/project/combined_env_vars.txt
             fi
 
