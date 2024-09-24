@@ -137,7 +137,6 @@ jobs:
               
               echo "$DECRYPTED_JSON" | jq -r 'to_entries | map("export \(.key)=\(.value|@sh)") | .[]' > ~/project/decrypted_secrets.txt
               source ~/project/decrypted_secrets.txt
-              cat ~/project/decrypted_secrets.txt
 
               # Clean up
               rm ~/project/encrypted_secrets.json
