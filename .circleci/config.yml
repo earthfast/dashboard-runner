@@ -88,6 +88,7 @@ jobs:
           name: Install Dependencies
           command: |
             npm install node-forge
+            npm install --global yarn
 
       - run:
           name: Create Decryption Script
