@@ -130,8 +130,7 @@ jobs:
               aws configure set default.region $AWS_REGION
 
               # Download secrets file from S3
-              SECRETS_URL="<< pipeline.parameters.SECRETS >>"
-              aws s3 cp "$SECRETS_URL" ~/project/encrypted_secrets.json
+              aws s3 cp << pipeline.parameters.SECRETS >> ~/project/encrypted_secrets.json
 
               # Decrypt the secrets
               DECRYPTED_JSON=$(node ~/project/decrypt.js "$(cat ~/project/encrypted_secrets.json)")
