@@ -180,6 +180,7 @@ jobs:
             - run:
                 name: Run Build in Controlled Environment
                 command: |
+                  ls -la ~/project/repository
                   docker run --rm \
                     --env-file ~/project/combined_env_vars.txt \
                     -v ~/project/repository:/app \
