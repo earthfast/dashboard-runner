@@ -19,14 +19,18 @@ jobs:
         fetch-depth: 0  # Fetch all history for all branches and tags
 
     - name: Ensure repository is dashboard-runner
+      id: check_repo
       run: |
         REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
         if [ "$REPO_NAME" != "dashboard-runner" ]; then
           echo "This action is only allowed to run in the earthfast/dashboard-runner repository."
-          exit 0
+          echo "should_run=false" >> $GITHUB_OUTPUT
+        else
+          echo "should_run=true" >> $GITHUB_OUTPUT
         fi
 
     - name: Push to private repository
+      if: steps.check_repo.outputs.should_run == 'true'
       env:
         GH_TOKEN: ${{ secrets.GH_PAT }}
         TARGET_PRIVATE_MIRROR_REPO: ${{ secrets.TARGET_PRIVATE_MIRROR_REPO }}
