@@ -55,6 +55,21 @@ jobs:
       - image: cimg/base:stable
     steps:
       - run:
+          name: Project Information
+          command: |
+            echo "Project Setup:"
+            echo "SOURCE_TYPE: << pipeline.parameters.SOURCE_TYPE >>"
+            echo "S3_URL: << pipeline.parameters.S3_URL >>"
+            echo "REPOSITORY: << pipeline.parameters.REPOSITORY >>"
+            echo "BUILD_DIR: << pipeline.parameters.BUILD_DIR >>"
+            echo "PACKAGE_INSTALL_COMMAND: << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
+            echo "BUILD_COMMAND: << pipeline.parameters.BUILD_COMMAND >>"
+            echo "OUTPUT_DIR: << pipeline.parameters.OUTPUT_DIR >>"
+            echo "ONE_CLICK_SERVER_URL: << pipeline.parameters.ONE_CLICK_SERVER_URL >>"
+            echo "ENVIRONMENT: << pipeline.parameters.ENVIRONMENT >>"
+            echo "CI_TRIGGER: << pipeline.parameters.CI_TRIGGER >>"
+
+      - run:
           name: Check CI_TRIGGER
           command: |
             if [ "<< pipeline.parameters.CI_TRIGGER >>" != true ]; then
@@ -124,7 +139,7 @@ jobs:
           command: |
             if [ -n "<< pipeline.parameters.SECRETS >>" ]; then
               echo "Downloading and decoding secrets..."
-              
+
               # Configure AWS CLI
               aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
               aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
@@ -135,7 +150,7 @@ jobs:
 
               # Decrypt the secrets
               DECRYPTED_JSON=$(node ~/project/decrypt.js "$(cat ~/project/encrypted_secrets.json)")
-              
+
               echo "$DECRYPTED_JSON" | jq -r 'to_entries | map("export \(.key)=\(.value|@sh)") | .[]' > ~/project/decrypted_secrets.txt
               source ~/project/decrypted_secrets.txt
 
