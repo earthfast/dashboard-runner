@@ -256,8 +256,8 @@ jobs:
             BUNDLE_PATH="${OUTPUT_DIR:+repository/$OUTPUT_DIR}"
             BUNDLE_PATH="${BUNDLE_PATH:-repository}"
 
-            bundle_filename="$(npx --package=earthfast-cli@0.10.0 --yes earthfast bundle create earthfast-bundle "$BUNDLE_PATH")"
-            checksum="$(npx --package=earthfast-cli@0.10.0 --yes earthfast bundle checksum $bundle_filename)"
+            bundle_filename="$(npx --package=earthfast-cli@0.10.2 --yes earthfast bundle create earthfast-bundle "$BUNDLE_PATH")"
+            checksum="$(npx --package=earthfast-cli@0.10.2 --yes earthfast bundle checksum $bundle_filename)"
 
             echo $checksum > ~/project/repository/checksum
             echo "Bundle Filename: $bundle_filename"
