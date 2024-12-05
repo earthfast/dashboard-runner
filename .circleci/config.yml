@@ -10,7 +10,7 @@ parameters:
   ENVIRONMENT:
     type: string
     default: "default"
-    enum: ["default", "development", "staging", "sepolia-staging"]
+    enum: ["default", "development", "testnet-sepolia", "testnet-sepolia-staging"]
   ENVIRONMENT_VARIABLES:
     type: string
     default: ""
@@ -215,9 +215,9 @@ jobs:
 
                   if [ "<< pipeline.parameters.ENVIRONMENT >>" == "development" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_DEV
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "staging" ]; then
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "staging-sepolia" ]; then
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia-staging" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA_STAGING
                   else
                     echo "Invalid / default environment specified."
