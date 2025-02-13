@@ -102,35 +102,6 @@ jobs:
             npm install node-forge
             npm install --global yarn
 
-      - run:
-          name: Create Decryption Script
-          command: |
-            echo "const forge = require('node-forge');" > ~/project/decrypt.js
-            echo "const fs = require('fs');" >> ~/project/decrypt.js
-            echo "" >> ~/project/decrypt.js
-            echo "function decryptData(encryptedData) {" >> ~/project/decrypt.js
-            echo "  const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> ~/project/decrypt.js
-            echo "  const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> ~/project/decrypt.js
-            echo "  const decodedData = forge.util.decode64(encryptedData);" >> ~/project/decrypt.js
-            echo "  return privateKey.decrypt(decodedData, 'RSA-OAEP', {" >> ~/project/decrypt.js
-            echo "    md: forge.md.sha256.create()," >> ~/project/decrypt.js
-            echo "    mgf1: { md: forge.md.sha1.create() }" >> ~/project/decrypt.js
-            echo "  });" >> ~/project/decrypt.js
-            echo "}" >> ~/project/decrypt.js
-            echo "" >> ~/project/decrypt.js
-            echo "const input = process.argv[2];" >> ~/project/decrypt.js
-            echo "try {" >> ~/project/decrypt.js
-            echo "  const parsedJson = JSON.parse(input);" >> ~/project/decrypt.js
-            echo "  const decryptedJson = Object.keys(parsedJson).reduce((acc, key) => {" >> ~/project/decrypt.js
-            echo "    acc[key] = decryptData(parsedJson[key]);" >> ~/project/decrypt.js
-            echo "    return acc;" >> ~/project/decrypt.js
-            echo "  }, {});" >> ~/project/decrypt.js
-            echo "  console.log(JSON.stringify(decryptedJson));" >> ~/project/decrypt.js
-            echo "} catch (e) {" >> ~/project/decrypt.js
-            echo "  // If parsing fails, assume it's a single encrypted token" >> ~/project/decrypt.js
-            echo "  console.log(decryptData(input));" >> ~/project/decrypt.js
-            echo "}" >> ~/project/decrypt.js
-
       - when:
           condition:
             not:
@@ -162,6 +133,35 @@ jobs:
 
                   # Add 'export' to each line and write to file
                   echo "$ENV_VARS_STRING" | sed 's/^/export /' > ~/project/environment_variables.txt
+
+      - run:
+          name: Create Decryption Script
+          command: |
+            echo "const forge = require('node-forge');" > ~/project/decrypt.js
+            echo "const fs = require('fs');" >> ~/project/decrypt.js
+            echo "" >> ~/project/decrypt.js
+            echo "function decryptData(encryptedData) {" >> ~/project/decrypt.js
+            echo "  const privateKeyPem = Buffer.from(process.env.BASE64_ENCODED_PRIVATE_KEY, 'base64').toString('utf8');" >> ~/project/decrypt.js
+            echo "  const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);" >> ~/project/decrypt.js
+            echo "  const decodedData = forge.util.decode64(encryptedData);" >> ~/project/decrypt.js
+            echo "  return privateKey.decrypt(decodedData, 'RSA-OAEP', {" >> ~/project/decrypt.js
+            echo "    md: forge.md.sha256.create()," >> ~/project/decrypt.js
+            echo "    mgf1: { md: forge.md.sha1.create() }" >> ~/project/decrypt.js
+            echo "  });" >> ~/project/decrypt.js
+            echo "}" >> ~/project/decrypt.js
+            echo "" >> ~/project/decrypt.js
+            echo "const input = process.argv[2];" >> ~/project/decrypt.js
+            echo "try {" >> ~/project/decrypt.js
+            echo "  const parsedJson = JSON.parse(input);" >> ~/project/decrypt.js
+            echo "  const decryptedJson = Object.keys(parsedJson).reduce((acc, key) => {" >> ~/project/decrypt.js
+            echo "    acc[key] = decryptData(parsedJson[key]);" >> ~/project/decrypt.js
+            echo "    return acc;" >> ~/project/decrypt.js
+            echo "  }, {});" >> ~/project/decrypt.js
+            echo "  console.log(JSON.stringify(decryptedJson));" >> ~/project/decrypt.js
+            echo "} catch (e) {" >> ~/project/decrypt.js
+            echo "  // If parsing fails, assume it's a single encrypted token" >> ~/project/decrypt.js
+            echo "  console.log(decryptData(input));" >> ~/project/decrypt.js
+            echo "}" >> ~/project/decrypt.js
 
       - when:
           condition:
