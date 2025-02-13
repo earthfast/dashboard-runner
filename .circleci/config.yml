@@ -10,7 +10,7 @@ parameters:
   ENVIRONMENT:
     type: string
     default: "default"
-    enum: ["default", "development", "staging", "sepolia-staging"]
+    enum: ["default", "development", "testnet-sepolia", "testnet-sepolia-staging"]
   GITHUB_ACCESS_TOKEN:
     type: string
     default: ""
@@ -108,7 +108,7 @@ jobs:
               equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
           steps:
             - run:
-                name: Fetch env. variables from One Click Server
+                name: Fetch environment variables from Server
                 command: |
                   set -e  # Exit immediately if a command exits with a non-zero status
 
@@ -120,6 +120,14 @@ jobs:
 
                   # Fetch environment variables from the One Click Server
                   ENV_VARS_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>/projects/<< pipeline.parameters.PROJECT_ID >>/env-vars"
+
+                  # Determine which ADMIN_KEY to use based on the ENVIRONMENT
+                  if [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia" ]; then
+                    ADMIN_KEY=$ADMIN_KEY_TESTNET
+                  else
+                    ADMIN_KEY=$ADMIN_KEY_STAGING
+                  fi
+
                   ENV_VARS=$(curl -s -H "x-admin-key: $ADMIN_KEY" $ENV_VARS_URL)
                   if [ $? -ne 0 ] || [ -z "$ENV_VARS" ]; then
                     echo "Failed to fetch environment variables"
@@ -214,9 +222,9 @@ jobs:
 
                   if [ "<< pipeline.parameters.ENVIRONMENT >>" == "development" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_DEV
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "staging" ]; then
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "staging-sepolia" ]; then
+                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia-staging" ]; then
                     S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA_STAGING
                   else
                     echo "Invalid / default environment specified."
