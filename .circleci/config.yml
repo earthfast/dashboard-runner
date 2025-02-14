@@ -11,9 +11,6 @@ parameters:
     type: string
     default: "default"
     enum: ["default", "development", "testnet-sepolia", "testnet-sepolia-staging"]
-  ENVIRONMENT_VARIABLES:
-    type: string
-    default: ""
   GITHUB_ACCESS_TOKEN:
     type: string
     default: ""
@@ -38,16 +35,15 @@ parameters:
   S3_URL:
     type: string
     default: ""
-  SECRETS:
-    type: string
-    default: ""
   SOURCE_TYPE:
     type: string
     default: "github"
   CI_TRIGGER:
     type: boolean
     default: true
-
+  PROJECT_ID:
+    type: string
+    default: ""
 
 jobs:
   publish:
@@ -68,6 +64,7 @@ jobs:
             echo "ONE_CLICK_SERVER_URL: << pipeline.parameters.ONE_CLICK_SERVER_URL >>"
             echo "ENVIRONMENT: << pipeline.parameters.ENVIRONMENT >>"
             echo "CI_TRIGGER: << pipeline.parameters.CI_TRIGGER >>"
+            echo "PROJECT_ID: << pipeline.parameters.PROJECT_ID >>"
 
       - run:
           name: Check CI_TRIGGER
@@ -105,6 +102,46 @@ jobs:
             npm install node-forge
             npm install --global yarn
 
+      - when:
+          condition:
+            not:
+              equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
+          steps:
+            - run:
+                name: Fetch environment variables from Server
+                command: |
+                  set -e  # Exit immediately if a command exits with a non-zero status
+
+                  # Check if PROJECT_ID is empty
+                  if [ -z "<< pipeline.parameters.PROJECT_ID >>" ]; then
+                    echo "PROJECT_ID is empty. Exiting with error."
+                    exit 1
+                  fi
+
+                  # Fetch environment variables from the One Click Server
+                  ENV_VARS_URL="<< pipeline.parameters.ONE_CLICK_SERVER_URL >>/projects/<< pipeline.parameters.PROJECT_ID >>/env-vars"
+
+                  # Determine which ADMIN_KEY to use based on the ENVIRONMENT
+                  if [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia" ]; then
+                    ADMIN_KEY=$ADMIN_KEY_TESTNET
+                  else
+                    ADMIN_KEY=$ADMIN_KEY_STAGING
+                  fi
+
+                  ENV_VARS=$(curl -s -H "x-admin-key: $ADMIN_KEY" $ENV_VARS_URL)
+                  if [ $? -ne 0 ] || [ -z "$ENV_VARS" ]; then
+                    echo "Failed to fetch environment variables"
+                    exit 1
+                  fi
+
+                  echo "Fetched Environment Variables: $ENV_VARS"
+
+                  # Extract the environment variables string from the JSON response
+                  ENV_VARS_STRING=$(echo "$ENV_VARS" | jq -r '.environmentVariables')
+
+                  # Add 'export' to each line and write to file
+                  echo "$ENV_VARS_STRING" | sed 's/^/export /' > ~/project/environment_variables.txt
+
       - run:
           name: Create Decryption Script
           command: |
@@ -133,36 +170,6 @@ jobs:
             echo "  // If parsing fails, assume it's a single encrypted token" >> ~/project/decrypt.js
             echo "  console.log(decryptData(input));" >> ~/project/decrypt.js
             echo "}" >> ~/project/decrypt.js
-
-      - run:
-          name: Decode secrets and environment variables
-          command: |
-            if [ -n "<< pipeline.parameters.SECRETS >>" ]; then
-              echo "Downloading and decoding secrets..."
-
-              # Configure AWS CLI
-              aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-              aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-              aws configure set default.region $AWS_REGION
-
-              # Download secrets file from S3
-              aws s3 cp << pipeline.parameters.SECRETS >> ~/project/encrypted_secrets.json
-
-              # Decrypt the secrets
-              DECRYPTED_JSON=$(node ~/project/decrypt.js "$(cat ~/project/encrypted_secrets.json)")
-
-              echo "$DECRYPTED_JSON" | jq -r 'to_entries | map("export \(.key)=\(.value|@sh)") | .[]' > ~/project/decrypted_secrets.txt
-              source ~/project/decrypted_secrets.txt
-
-              # Clean up
-              rm ~/project/encrypted_secrets.json
-            fi
-
-            if [ -n "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" ]; then
-              echo "Processing environment variables..."
-              echo "<< pipeline.parameters.ENVIRONMENT_VARIABLES >>" | sed 's/^/export /' > ~/project/environment_variables.txt
-              source ~/project/environment_variables.txt
-            fi
 
       - when:
           condition:
