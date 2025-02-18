@@ -140,7 +140,7 @@ jobs:
                   ENV_VARS_STRING=$(echo "$ENV_VARS" | jq -r '.environmentVariables')
 
                   # Add 'export' to each line and write to file
-                  echo "$ENV_VARS_STRING" | sed 's/^/export /' > ~/project/environment_variables.txt
+                  echo "$ENV_VARS_STRING" > ~/project/.env.ef_circleci
 
       - run:
           name: Create Decryption Script
@@ -205,6 +205,7 @@ jobs:
                 command: |
                   set -e
                   [ -f ~/project/.env ] && source ~/project/.env
+                  [ -f ~/project/.env.ef_circleci ] && source ~/project/.env.ef_circleci
                   [ -n "<< pipeline.parameters.BUILD_DIR >>" ] && cd "<< pipeline.parameters.BUILD_DIR >>"
                   [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ] && eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
                   eval "<< pipeline.parameters.BUILD_COMMAND >>"
