@@ -17,4 +17,5 @@ jobs:
 
     - name: Push dev to main
       run: |
+        git fetch --all
         git push origin dev:main
