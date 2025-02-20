@@ -44,9 +44,10 @@ parameters:
   PROJECT_ID:
     type: string
     default: ""
-  IS_NEXT_JS:
-    type: boolean
-    default: false
+  FRAMEWORK_TYPE:
+    type: string
+    default: "static"
+    enum: ["nextjs", "static"]
 
 jobs:
   publish:
@@ -68,7 +69,7 @@ jobs:
             echo "ENVIRONMENT: << pipeline.parameters.ENVIRONMENT >>"
             echo "CI_TRIGGER: << pipeline.parameters.CI_TRIGGER >>"
             echo "PROJECT_ID: << pipeline.parameters.PROJECT_ID >>"
-            echo "IS_NEXT_JS: << pipeline.parameters.IS_NEXT_JS >>"
+            echo "FRAMEWORK_TYPE: << pipeline.parameters.FRAMEWORK_TYPE >>"
 
       - run:
           name: Check CI_TRIGGER
@@ -206,7 +207,7 @@ jobs:
 
       - when:
           condition:
-            equal: [false, "<< pipeline.parameters.IS_NEXT_JS >>"]
+            equal: ["static", "<< pipeline.parameters.FRAMEWORK_TYPE >>"]
           steps:
             - run:
                 name: Build Project
@@ -221,7 +222,7 @@ jobs:
 
       - when:
           condition:
-            equal: [true, "<< pipeline.parameters.IS_NEXT_JS >>"]
+            equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK_TYPE >>"]
           steps:
             - run:
                 name: Build Next.js Project
@@ -269,7 +270,8 @@ jobs:
 
                   # Move necessary files from standalone to output
                   log "Moving files to output directory..."
-                  mv .next/standalone/ output/
+                  mv .next/standalone/* output/
+                  mv .next/standalone/.next output/
                   mv .next/static/ output/.next/
                   mv public/* output/public/
 
@@ -312,7 +314,7 @@ jobs:
 
       - when:
           condition:
-            equal: [false, "<< pipeline.parameters.IS_NEXT_JS >>"]
+            equal: ["static", "<< pipeline.parameters.FRAMEWORK_TYPE >>"]
           steps:
             - run:
                 name: Check for index.html
@@ -333,8 +335,8 @@ jobs:
           name: Create Earthfast Bundle
           working_directory: ~/project
           command: |
-            # Check if IS_NEXT_JS is true and set OUTPUT_DIR accordingly
-            if [ "<< pipeline.parameters.IS_NEXT_JS >>" = true ]; then
+            # Check if FRAMEWORK_TYPE is 'nextjs' and set OUTPUT_DIR accordingly
+            if [ "<< pipeline.parameters.FRAMEWORK_TYPE >>" = "nextjs" ]; then
               OUTPUT_DIR="output"
             else
               OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
