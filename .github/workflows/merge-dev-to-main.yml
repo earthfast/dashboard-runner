@@ -13,11 +13,14 @@ jobs:
     - name: Checkout dev branch
       uses: actions/checkout@v4
       with:
-        ref: dev
+        ref: main
 
     - name: Push dev to main
       run: |
         git fetch --all
+        git pull origin main
+        git checkout dev
+        git pull origin main
         git push origin dev:main
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
