@@ -14,13 +14,23 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: main
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Push dev to main
+      env:
+        GH_TOKEN: ${{ secrets.GH_PAT }}
       run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+
+        if [ -z "$GH_TOKEN" ]; then
+          echo "Error: GH_PAT is not set"
+          exit 1
+        fi
+
         git fetch --all
         git pull origin main
         git checkout dev
         git pull origin main
-        git push origin dev:main
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        git push https://${GH_TOKEN}@github.com/earthfast/dashboard-runner.git dev:main
