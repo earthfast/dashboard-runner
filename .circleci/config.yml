@@ -269,13 +269,7 @@ jobs:
 
                   # Move necessary files from standalone to output
                   log "Moving files to output directory..."
-                  mv .next/standalone/.next output/
-                  mv .next/standalone/node_modules output/
-                  if [ -f ".next/standalone/.env" ]; then
-                    mv .next/standalone/.env output/
-                  fi
-                  mv .next/standalone/package.json output/
-                  mv .next/standalone/server.js output/
+                  mv .next/standalone/ output/
                   mv .next/static/ output/.next/
                   mv public/* output/public/
 
