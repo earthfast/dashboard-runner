@@ -44,7 +44,7 @@ parameters:
   PROJECT_ID:
     type: string
     default: ""
-  FRAMEWORK_TYPE:
+  FRAMEWORK:
     type: string
     default: "static"
     enum: ["nextjs", "static"]
@@ -69,7 +69,7 @@ jobs:
             echo "ENVIRONMENT: << pipeline.parameters.ENVIRONMENT >>"
             echo "CI_TRIGGER: << pipeline.parameters.CI_TRIGGER >>"
             echo "PROJECT_ID: << pipeline.parameters.PROJECT_ID >>"
-            echo "FRAMEWORK_TYPE: << pipeline.parameters.FRAMEWORK_TYPE >>"
+            echo "FRAMEWORK: << pipeline.parameters.FRAMEWORK >>"
 
       - run:
           name: Check CI_TRIGGER
@@ -207,7 +207,7 @@ jobs:
 
       - when:
           condition:
-            equal: ["static", "<< pipeline.parameters.FRAMEWORK_TYPE >>"]
+            equal: ["static", "<< pipeline.parameters.FRAMEWORK >>"]
           steps:
             - run:
                 name: Build Project
@@ -222,7 +222,7 @@ jobs:
 
       - when:
           condition:
-            equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK_TYPE >>"]
+            equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK >>"]
           steps:
             - run:
                 name: Build Next.js Project
@@ -314,7 +314,7 @@ jobs:
 
       - when:
           condition:
-            equal: ["static", "<< pipeline.parameters.FRAMEWORK_TYPE >>"]
+            equal: ["static", "<< pipeline.parameters.FRAMEWORK >>"]
           steps:
             - run:
                 name: Check for index.html
@@ -335,8 +335,8 @@ jobs:
           name: Create Earthfast Bundle
           working_directory: ~/project
           command: |
-            # Check if FRAMEWORK_TYPE is 'nextjs' and set OUTPUT_DIR accordingly
-            if [ "<< pipeline.parameters.FRAMEWORK_TYPE >>" = "nextjs" ]; then
+            # Check if FRAMEWORK is 'nextjs' and set OUTPUT_DIR accordingly
+            if [ "<< pipeline.parameters.FRAMEWORK >>" = "nextjs" ]; then
               OUTPUT_DIR="output"
             else
               OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
