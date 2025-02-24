@@ -44,6 +44,10 @@ parameters:
   PROJECT_ID:
     type: string
     default: ""
+  FRAMEWORK:
+    type: string
+    default: "static"
+    enum: ["nextjs", "static"]
 
 jobs:
   publish:
@@ -65,6 +69,7 @@ jobs:
             echo "ENVIRONMENT: << pipeline.parameters.ENVIRONMENT >>"
             echo "CI_TRIGGER: << pipeline.parameters.CI_TRIGGER >>"
             echo "PROJECT_ID: << pipeline.parameters.PROJECT_ID >>"
+            echo "FRAMEWORK: << pipeline.parameters.FRAMEWORK >>"
 
       - run:
           name: Check CI_TRIGGER
@@ -101,6 +106,7 @@ jobs:
           command: |
             npm install node-forge
             npm install --global yarn
+            npm install --global pnpm
 
       - when:
           condition:
@@ -199,6 +205,10 @@ jobs:
                     echo "No branch specified, staying on default branch."
                   fi
 
+      - when:
+          condition:
+            equal: ["static", "<< pipeline.parameters.FRAMEWORK >>"]
+          steps:
             - run:
                 name: Build Project
                 working_directory: ~/project/repository
@@ -209,6 +219,67 @@ jobs:
                   [ -n "<< pipeline.parameters.BUILD_DIR >>" ] && cd "<< pipeline.parameters.BUILD_DIR >>"
                   [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ] && eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
                   eval "<< pipeline.parameters.BUILD_COMMAND >>"
+
+      - when:
+          condition:
+            equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK >>"]
+          steps:
+            - run:
+                name: Build Next.js Project
+                working_directory: ~/project/repository
+                command: |
+                  set -e
+
+                  # Function to log messages
+                  log() {
+                    echo "$(date +'%Y-%m-%d %H:%M:%S') - $1"
+                  }
+
+                  # Load environment variables
+                  log "Loading environment variables..."
+                  [ -f ~/project/.env ] && source ~/project/.env
+                  [ -f ~/project/.env.ef_circleci ] && source ~/project/.env.ef_circleci
+
+                  # Change to the specified build directory if provided
+                  if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
+                    log "Changing to build directory: << pipeline.parameters.BUILD_DIR >>"
+                    cd "<< pipeline.parameters.BUILD_DIR >>"
+                  fi
+
+                  # Install dependencies
+                  if [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ]; then
+                    log "Installing dependencies..."
+                    eval "NEXT_PRIVATE_STANDALONE=true << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
+                  else
+                    log "Error: PACKAGE_INSTALL_COMMAND is not set. Exiting."
+                    exit 1
+                  fi
+
+                  # Build the project
+                  if [ -n "<< pipeline.parameters.BUILD_COMMAND >>" ]; then
+                    log "Building the project..."
+                    eval "NEXT_PRIVATE_STANDALONE=true << pipeline.parameters.BUILD_COMMAND >>"
+                  else
+                    log "Error: BUILD_COMMAND is not set. Exiting."
+                    exit 1
+                  fi
+
+                  # Create output directory
+                  log "Creating output directories..."
+                  mkdir -p output output/public output/.next output/node_modules
+
+                  # Move necessary files from standalone to output
+                  log "Moving files to output directory..."
+                  mv .next/standalone/* output/
+                  mv .next/standalone/.next output/
+                  mv .next/static/ output/.next/
+                  mv public/* output/public/
+
+                  log "Listing contents of output directory:"
+                  ls -A1 output/
+
+                  # Set OUTPUT_DIR to output
+                  echo "export OUTPUT_DIR=output" >> $BASH_ENV
 
       - when:
           condition:
@@ -241,26 +312,36 @@ jobs:
                     rmdir "$extracted_folder"
                   fi
 
-      - run:
-          name: Check for index.html
-          working_directory: ~/project/repository
-          command: |
-            OUTPUT_DIR=.
-            if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
-              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
-            fi
-            if [ -f "$OUTPUT_DIR/index.html" ]; then
-              echo "index.html found in $OUTPUT_DIR"
-            else
-              echo "Error: index.html not found in $OUTPUT_DIR"
-              exit 1
-            fi
+      - when:
+          condition:
+            equal: ["static", "<< pipeline.parameters.FRAMEWORK >>"]
+          steps:
+            - run:
+                name: Check for index.html
+                working_directory: ~/project/repository
+                command: |
+                  OUTPUT_DIR=.
+                  if [ -n "<< pipeline.parameters.OUTPUT_DIR >>" ]; then
+                    OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+                  fi
+                  if [ -f "$OUTPUT_DIR/index.html" ]; then
+                    echo "index.html found in $OUTPUT_DIR"
+                  else
+                    echo "Error: index.html not found in $OUTPUT_DIR"
+                    exit 1
+                  fi
 
       - run:
           name: Create Earthfast Bundle
           working_directory: ~/project
           command: |
-            OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            # Check if FRAMEWORK is 'nextjs' and set OUTPUT_DIR accordingly
+            if [ "<< pipeline.parameters.FRAMEWORK >>" = "nextjs" ]; then
+              OUTPUT_DIR="output"
+            else
+              OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
+            fi
+
             BUNDLE_PATH="${OUTPUT_DIR:+repository/$OUTPUT_DIR}"
             BUNDLE_PATH="${BUNDLE_PATH:-repository}"
 
