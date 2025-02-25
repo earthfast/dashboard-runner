@@ -3,7 +3,7 @@ version: 2.1
 parameters:
   BUILD_COMMAND:
     type: string
-    default: "npm run build"
+    default: ""
   BUILD_DIR:
     type: string
     default: ""
@@ -207,7 +207,10 @@ jobs:
 
       - when:
           condition:
-            equal: ["static", "<< pipeline.parameters.FRAMEWORK >>"]
+            and:
+              - equal: ["static", "<< pipeline.parameters.FRAMEWORK >>"]
+              - not:
+                  equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
           steps:
             - run:
                 name: Build Project
