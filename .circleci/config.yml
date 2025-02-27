@@ -81,12 +81,61 @@ jobs:
               echo "CI_TRIGGER is true. Continuing with the workflow."
             fi
 
-      - run:
-          name: Install AWS CLI
-          command: |
-            if ! command -v aws &> /dev/null; then
-              sudo apt-get update && sudo apt-get install -y awscli
-            fi
+      - when:
+          condition:
+            equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
+          steps:
+            - restore_cache:
+                keys:
+                  - aws-cli-v8
+
+            - run:
+                name: Setup AWS CLI from cache or install
+                command: |
+                  echo "Checking for AWS CLI..."
+                  if ! command -v aws &> /dev/null; then
+                    echo "No AWS CLI found in system. Installing..."
+
+                    if [ -d "/tmp/aws-cli-cache/dist-packages" ]; then
+                      echo "Found cached AWS CLI. Installing from cache..."
+                      sudo cp -r /tmp/aws-cli-cache/dist-packages/* /usr/lib/python3/dist-packages/
+                      sudo cp /tmp/aws-cli-cache/aws /usr/bin/aws
+                      sudo chmod +x /usr/bin/aws
+                    else
+                      echo "No cache found. Installing from apt..."
+                      sudo apt-get update && sudo apt-get install -y \
+                        awscli \
+                        python3-botocore \
+                        python3-colorama \
+                        python3-dateutil \
+                        python3-docutils \
+                        python3-jmespath \
+                        python3-pyasn1 \
+                        python3-yaml \
+                        python3-rsa \
+                        python3-s3transfer \
+                        python3-six \
+                        python3-urllib3
+
+                      # Cache the entire installation
+                      mkdir -p /tmp/aws-cli-cache/dist-packages
+                      cp -r /usr/lib/python3/dist-packages/* /tmp/aws-cli-cache/dist-packages/
+                      cp /usr/bin/aws /tmp/aws-cli-cache/
+                    fi
+                  fi
+
+                  aws --version
+
+            - save_cache:
+                key: aws-cli-v8
+                paths:
+                  - /tmp/aws-cli-cache
+
+            - run:
+                name: Verify AWS Installation
+                command: |
+                  which aws
+                  aws --version
 
       - run:
           name: Install NVM and Node.js
