@@ -15,8 +15,7 @@ jobs:
     steps:
     - name: Check if repository is dashboard-runner
       run: |
-        REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
-        if [ "$REPO_NAME" != "dashboard-runner" ]; then
+        if [ "$GITHUB_REPOSITORY" != "earthfast/dashboard-runner" ]; then
           echo "This action is only allowed to run in the dashboard-runner repository."
           exit 0
         fi
