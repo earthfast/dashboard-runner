@@ -13,13 +13,6 @@ jobs:
   mirror_repository:
     runs-on: ubuntu-latest
     steps:
-    - name: Check if repository is dashboard-runner
-      run: |
-        if [ "$GITHUB_REPOSITORY" != "earthfast/dashboard-runner" ]; then
-          echo "This action is only allowed to run in the dashboard-runner repository."
-          exit 0
-        fi
-
     - name: Checkout
       uses: actions/checkout@v4
       with:
@@ -34,16 +27,15 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
 
+        # Ensure this is only run in the dashboard-runner repository
+        if [ "$GITHUB_REPOSITORY" != "earthfast/dashboard-runner" ]; then
+          echo "This action is only allowed to run in the dashboard-runner repository."
+          exit 0
+        fi
+
         if [ -z "$GH_TOKEN" ]; then
           echo "Error: GH_PAT is not set"
           exit 1
-        fi
-
-        # Ensure this is only run in the dashboard-runner repository
-        REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
-        if [ "$REPO_NAME" != "dashboard-runner" ]; then
-          echo "This action is only allowed to run in the dashboard-runner repository."
-          exit 0
         fi
 
         # Clone the source repository
