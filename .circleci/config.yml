@@ -343,9 +343,10 @@ jobs:
                     cp -r .next/standalone/.next ~/project/repository/output/ || { log "Failed to copy .next"; exit 1; }
                   fi
 
-                  # Copy static files and public directory
+                  # Copy static files, public directory and node_modules
                   cp -r .next/static/ ~/project/repository/output/.next/ || { log "Failed to copy static files"; exit 1; }
                   cp -r public/* ~/project/repository/output/public/ || { log "Failed to copy public files"; exit 1; }
+                  cp -r .next/standalone/node_modules ~/project/repository/output/ || { log "Failed to copy node_modules"; exit 1; }
 
                   log "Listing contents of output directory:"
                   ls -la ~/project/repository/output/
