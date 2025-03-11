@@ -318,17 +318,37 @@ jobs:
 
                   # Create output directory
                   log "Creating output directories..."
-                  mkdir -p output output/public output/.next output/node_modules
+                  mkdir -p ~/project/repository/output
+                  mkdir -p ~/project/repository/output/node_modules
+                  mkdir -p ~/project/repository/output/public
+                  mkdir -p ~/project/repository/output/.next
 
                   # Move necessary files from standalone to output
-                  log "Moving files to output directory..."
-                  mv .next/standalone/* output/
-                  mv .next/standalone/.next output/
-                  mv .next/static/ output/.next/
-                  mv public/* output/public/
+                  if [ ! -f .next/standalone/server.js ]; then
+                    log "server.js not found in .next/standalone. Searching for its location..."
+                    SERVER_JS_PATH=$(find .next/standalone -path '*/node_modules' -prune -o -name server.js -print)
+                    if [ -n "$SERVER_JS_PATH" ]; then
+                      log "Found server.js at $SERVER_JS_PATH"
+                      SERVER_JS_DIR=$(dirname "$SERVER_JS_PATH")
+                      log "Copying files to ~/project/repository/output"
+                      cp -r "$SERVER_JS_DIR"/* ~/project/repository/output/ || { log "Failed to copy files"; exit 1; }
+                      cp -r "$SERVER_JS_DIR/.next" ~/project/repository/output/ || { log "Failed to copy .next"; exit 1; }
+                    else
+                      log "server.js not found in .next/standalone directory."
+                      exit 1
+                    fi
+                  else
+                    log "Copying files from .next/standalone"
+                    cp -r .next/standalone/* ~/project/repository/output/ || { log "Failed to copy files"; exit 1; }
+                    cp -r .next/standalone/.next ~/project/repository/output/ || { log "Failed to copy .next"; exit 1; }
+                  fi
+
+                  # Copy static files and public directory
+                  cp -r .next/static/ ~/project/repository/output/.next/ || { log "Failed to copy static files"; exit 1; }
+                  cp -r public/* ~/project/repository/output/public/ || { log "Failed to copy public files"; exit 1; }
 
                   log "Listing contents of output directory:"
-                  ls -A1 output/
+                  ls -la ~/project/repository/output/
 
                   # Set OUTPUT_DIR to output
                   echo "export OUTPUT_DIR=output" >> $BASH_ENV
@@ -387,6 +407,11 @@ jobs:
           name: Create Earthfast Bundle
           working_directory: ~/project
           command: |
+            # Debug information
+            echo "Current directory: $(pwd)"
+            echo "Checking for output directory..."
+            ls -la repository/
+
             # Check if FRAMEWORK is 'nextjs' and set OUTPUT_DIR accordingly
             if [ "<< pipeline.parameters.FRAMEWORK >>" = "nextjs" ]; then
               OUTPUT_DIR="output"
@@ -394,8 +419,19 @@ jobs:
               OUTPUT_DIR="<< pipeline.parameters.OUTPUT_DIR >>"
             fi
 
-            BUNDLE_PATH="${OUTPUT_DIR:+repository/$OUTPUT_DIR}"
-            BUNDLE_PATH="${BUNDLE_PATH:-repository}"
+            echo "OUTPUT_DIR is set to: $OUTPUT_DIR"
+            echo "Checking if directory exists: repository/$OUTPUT_DIR"
+
+            # Ensure the OUTPUT_DIR is correctly set
+            if [ ! -d "repository/$OUTPUT_DIR" ]; then
+              echo "Error: Directory repository/$OUTPUT_DIR does not exist."
+              echo "Contents of repository directory:"
+              ls -la repository/
+              exit 1
+            fi
+
+            BUNDLE_PATH="repository/$OUTPUT_DIR"
+            echo "Bundle path is set to: $BUNDLE_PATH"
 
             bundle_filename="$(npx --package=earthfast-cli@0.10.2 --yes earthfast bundle create earthfast-bundle "$BUNDLE_PATH")"
             checksum="$(npx --package=earthfast-cli@0.10.2 --yes earthfast bundle checksum $bundle_filename)"
