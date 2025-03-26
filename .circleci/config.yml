@@ -156,9 +156,9 @@ jobs:
             npm install node-forge
             npm install --global yarn
             npm install --global pnpm
-            sudo apt-get update
-            sudo add-apt-repository ppa:deadsnakes/ppa -y
-            sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+            # sudo apt-get update
+            # sudo add-apt-repository ppa:deadsnakes/ppa -y
+            # sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
 
       - when:
           condition:
@@ -271,8 +271,8 @@ jobs:
                   set -e
 
                   # Load prerequisites
-                  alias python3=/usr/bin/python3.11
-                  export PYTHON=/usr/bin/python3.11
+                  # alias python3=/usr/bin/python3.11
+                  # export PYTHON=/usr/bin/python3.11
                   export NODE_OPTIONS=--max_old_space_size=7168
 
                   [ -f ~/project/.env ] && source ~/project/.env
@@ -292,8 +292,8 @@ jobs:
                   set -e
 
                   # Load prerequisites and set nextjs standalone mode
-                  alias python3=/usr/bin/python3.11
-                  export PYTHON=/usr/bin/python3.11
+                  # alias python3=/usr/bin/python3.11
+                  # export PYTHON=/usr/bin/python3.11
                   export NEXT_PRIVATE_STANDALONE=true
                   export NODE_OPTIONS=--max_old_space_size=7168
 
