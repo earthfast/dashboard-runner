@@ -156,6 +156,7 @@ jobs:
             npm install node-forge
             npm install --global yarn
             npm install --global pnpm
+            sudo apt-get update
 
       - when:
           condition:
@@ -266,6 +267,10 @@ jobs:
                 working_directory: ~/project/repository
                 command: |
                   set -e
+
+                  # Load prerequisites
+                  export NODE_OPTIONS=--max_old_space_size=7168
+
                   [ -f ~/project/.env ] && source ~/project/.env
                   [ -f ~/project/.env.ef_circleci ] && source ~/project/.env.ef_circleci
                   [ -n "<< pipeline.parameters.BUILD_DIR >>" ] && cd "<< pipeline.parameters.BUILD_DIR >>"
@@ -281,6 +286,10 @@ jobs:
                 working_directory: ~/project/repository
                 command: |
                   set -e
+
+                  # Load prerequisites and set nextjs standalone mode
+                  export NEXT_PRIVATE_STANDALONE=true
+                  export NODE_OPTIONS=--max_old_space_size=7168
 
                   # Function to log messages
                   log() {
@@ -301,7 +310,7 @@ jobs:
                   # Install dependencies
                   if [ -n "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>" ]; then
                     log "Installing dependencies..."
-                    eval "NEXT_PRIVATE_STANDALONE=true << pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
+                    eval "<< pipeline.parameters.PACKAGE_INSTALL_COMMAND >>"
                   else
                     log "Error: PACKAGE_INSTALL_COMMAND is not set. Exiting."
                     exit 1
@@ -310,7 +319,7 @@ jobs:
                   # Build the project
                   if [ -n "<< pipeline.parameters.BUILD_COMMAND >>" ]; then
                     log "Building the project..."
-                    eval "NEXT_PRIVATE_STANDALONE=true << pipeline.parameters.BUILD_COMMAND >>"
+                    eval "<< pipeline.parameters.BUILD_COMMAND >>"
                   else
                     log "Error: BUILD_COMMAND is not set. Exiting."
                     exit 1
