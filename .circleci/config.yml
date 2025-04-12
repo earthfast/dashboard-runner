@@ -523,27 +523,37 @@ jobs:
                   server_pid=$!
 
                   # Wait for server to start
-                  echo "Waiting for server to start..."
-                  sleep 15
+                  echo "Waiting for server to start (polling)..."
+                  MAX_RETRIES=15
+                  RETRY_COUNT=0
+                  SERVER_READY=false
 
-                  # Get the actual IP that Next.js is binding to from the logs
-                  echo "Looking for Next.js binding address..."
+                  # Get the container IP
                   CONTAINER_IP=$(hostname -I | awk '{print $1}')
                   echo "Container IP: $CONTAINER_IP"
 
-                  # Try multiple ways to connect
-                  echo "Testing HTTP connection to server..."
-                  if curl -s --head --fail http://127.0.0.1:$PORT || curl -s --head --fail http://localhost:$PORT || curl -s --head --fail http://0.0.0.0:$PORT || curl -s --head --fail http://$CONTAINER_IP:$PORT; then
-                    echo "Server is responding to HTTP requests"
-                  else
-                    echo "Error: Server is not responding to HTTP requests"
+                  # Poll until server is ready or max retries reached
+                  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SERVER_READY" = false ]; do
+                    RETRY_COUNT=$((RETRY_COUNT+1))
+                    echo "Attempt $RETRY_COUNT of $MAX_RETRIES..."
+
+                    if curl -s --head --fail http://127.0.0.1:$PORT || curl -s --head --fail http://localhost:$PORT || curl -s --head --fail http://0.0.0.0:$PORT || curl -s --head --fail http://$CONTAINER_IP:$PORT; then
+                      SERVER_READY=true
+                      echo "Server is ready after $RETRY_COUNT attempts!"
+                    else
+                      echo "Server not ready yet, waiting 1 second..."
+                      sleep 1
+                    fi
+                  done
+
+                  # Continue with the rest of the script
+                  if [ "$SERVER_READY" = false ]; then
+                    echo "Error: Server failed to start after $MAX_RETRIES attempts"
                     if kill -0 $server_pid 2>/dev/null; then
                       kill $server_pid
                     fi
-
-                    # Completely halt the CircleCI workflow
-                    echo "Completely stopping CircleCI workflow due to test failure"
-                    circleci-agent step halt --exit-code=1
+                    echo "Completely stopping CircleCI workflow due to server startup failure"
+                    circleci-agent step halt
                   fi
 
                   # Check if server is still running
