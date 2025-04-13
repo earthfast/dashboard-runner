@@ -537,11 +537,12 @@ jobs:
                     RETRY_COUNT=$((RETRY_COUNT+1))
                     echo "Attempt $RETRY_COUNT of $MAX_RETRIES..."
 
-                    if curl -s --head --fail http://127.0.0.1:$PORT || curl -s --head --fail http://localhost:$PORT || curl -s --head --fail http://0.0.0.0:$PORT || curl -s --head --fail http://$CONTAINER_IP:$PORT; then
+                    # Use consistently the container IP for reliability and debugging
+                    if curl -s --head --fail http://$CONTAINER_IP:$PORT; then
                       SERVER_READY=true
-                      echo "Server is ready after $RETRY_COUNT attempts!"
+                      echo "Server is ready after $RETRY_COUNT attempts! Successfully connected to http://$CONTAINER_IP:$PORT"
                     else
-                      echo "Server not ready yet, waiting 1 second..."
+                      echo "Server not ready yet at http://$CONTAINER_IP:$PORT, waiting 1 second..."
                       sleep 1
                     fi
                   done
