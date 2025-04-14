@@ -450,6 +450,124 @@ jobs:
             echo "Bundle Filename: $bundle_filename"
             echo "Checksum: $checksum"
 
+      - when:
+          condition:
+            equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK >>"]
+          steps:
+            - run:
+                name: Validate Next.js Bundle Structure
+                working_directory: ~/project/repository/output
+                command: |
+                  echo "Checking Next.js bundle structure..."
+
+                  # Verify essential Next.js files and directories
+                  if [ ! -f "server.js" ]; then
+                    echo "Error: server.js is missing"
+                    exit 1
+                  fi
+
+                  if [ ! -d ".next" ]; then
+                    echo "Error: .next directory is missing"
+                    exit 1
+                  fi
+
+                  if [ ! -d ".next/static" ]; then
+                    echo "Error: .next/static directory is missing"
+                    exit 1
+                  fi
+
+                  if [ ! -d "public" ]; then
+                    echo "Warning: public directory is missing, this might be okay if no static assets are used"
+                  else
+                    echo "Public directory is present"
+                  fi
+
+                  echo "Next.js bundle structure is valid"
+
+            - run:
+                name: Validate Next.js Bundle Dependencies
+                working_directory: ~/project/repository/output
+                command: |
+                  echo "Checking for missing dependencies in the Next.js bundle..."
+
+                  # Check if package.json exists and node_modules is populated
+                  if [ ! -d "node_modules" ] || [ $(find node_modules -mindepth 1 -maxdepth 1 | wc -l) -eq 0 ]; then
+                    echo "Error: node_modules directory is missing or empty"
+                    exit 1
+                  fi
+
+                  # Check for common Next.js required modules
+                  required_modules=("next" "react" "react-dom")
+                  for module in "${required_modules[@]}"; do
+                    if [ ! -d "node_modules/$module" ]; then
+                      echo "Error: Required dependency '$module' is missing"
+                      exit 1
+                    fi
+                  done
+
+                  echo "All required dependencies are present"
+
+            - run:
+                name: Test Next.js Bundle
+                working_directory: ~/project/repository/output
+                command: |
+                  echo "Testing Next.js bundle to verify it can start properly..."
+
+                  # Install curl for HTTP testing
+                  sudo apt-get update
+                  sudo apt-get install -y curl
+
+                  # Start the server with specific host binding
+                  PORT=3000
+                  NODE_OPTIONS="--max-old-space-size=4096" HOST="0.0.0.0" node server.js &
+                  server_pid=$!
+
+                  # Wait for server to start
+                  echo "Waiting for server to start (polling)..."
+                  MAX_RETRIES=15
+                  RETRY_COUNT=0
+                  SERVER_READY=false
+
+                  # Get the container IP
+                  CONTAINER_IP=$(hostname -I | awk '{print $1}')
+                  echo "Container IP: $CONTAINER_IP"
+
+                  # Poll until server is ready or max retries reached
+                  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SERVER_READY" = false ]; do
+                    RETRY_COUNT=$((RETRY_COUNT+1))
+                    echo "Attempt $RETRY_COUNT of $MAX_RETRIES..."
+
+                    # Use consistently the container IP for reliability and debugging
+                    if curl -s --head --fail http://$CONTAINER_IP:$PORT; then
+                      SERVER_READY=true
+                      echo "Server is ready after $RETRY_COUNT attempts! Successfully connected to http://$CONTAINER_IP:$PORT"
+                    else
+                      echo "Server not ready yet at http://$CONTAINER_IP:$PORT, waiting 1 second..."
+                      sleep 1
+                    fi
+                  done
+
+                  # Continue with the rest of the script
+                  if [ "$SERVER_READY" = false ]; then
+                    echo "Error: Server failed to start after $MAX_RETRIES attempts"
+                    if kill -0 $server_pid 2>/dev/null; then
+                      kill $server_pid
+                    fi
+                    echo "Completely stopping CircleCI workflow due to server startup failure"
+                    circleci-agent step halt
+                  fi
+
+                  # Check if server is still running
+                  if kill -0 $server_pid 2>/dev/null; then
+                    echo "Server is running correctly"
+                    kill $server_pid
+                  else
+                    echo "Error: Server crashed during testing"
+                    # Completely halt the CircleCI workflow
+                    echo "Completely stopping CircleCI workflow due to server crash"
+                    circleci-agent step halt --exit-code=1
+                  fi
+
       - store_artifacts:
           path: earthfast-bundle.tgz
       - store_artifacts:
