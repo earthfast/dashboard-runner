@@ -158,6 +158,12 @@ jobs:
             npm install --global pnpm
             sudo apt-get update
 
+            # install bun
+            curl -fsSL https://bun.sh/install | bash
+            # Add Bun to .bashrc for persistence across steps
+            echo 'export BUN_INSTALL="$HOME/.bun"' >> $BASH_ENV
+            echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> $BASH_ENV
+
       - when:
           condition:
             not:
