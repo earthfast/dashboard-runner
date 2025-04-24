@@ -157,6 +157,10 @@ jobs:
             npm install --global yarn
             npm install --global pnpm
             sudo apt-get update
+            # Install Bun
+            curl -fsSL https://bun.sh/install | bash
+            echo 'export BUN_INSTALL="$HOME/.bun"' >> $BASH_ENV
+            echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> $BASH_ENV
 
       - when:
           condition:
@@ -279,7 +283,10 @@ jobs:
 
       - when:
           condition:
-            equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK >>"]
+            and:
+              - equal: ["nextjs", "<< pipeline.parameters.FRAMEWORK >>"]
+              - not:
+                  equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
           steps:
             - run:
                 name: Build Next.js Project
