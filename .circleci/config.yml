@@ -307,6 +307,12 @@ jobs:
                   [ -f ~/project/.env ] && source ~/project/.env
                   [ -f ~/project/.env.ef_circleci ] && source ~/project/.env.ef_circleci
 
+                  # Copy .env.ef_circleci to .env in the output directory
+                  log "Copying environment variables to output directory..."
+                  if [ -f ~/project/.env.ef_circleci ]; then
+                    cp ~/project/.env.ef_circleci ~/project/repository/.env
+                  fi
+
                   # Change to the specified build directory if provided
                   if [ -n "<< pipeline.parameters.BUILD_DIR >>" ]; then
                     log "Changing to build directory: << pipeline.parameters.BUILD_DIR >>"
@@ -358,10 +364,11 @@ jobs:
                     cp -r .next/standalone/.next ~/project/repository/output/ || { log "Failed to copy .next"; exit 1; }
                   fi
 
-                  # Copy static files, public directory and node_modules
+                  # Copy static files, public directory, node_modules and .env
                   cp -r .next/static/ ~/project/repository/output/.next/ || { log "Failed to copy static files"; exit 1; }
                   cp -r public/* ~/project/repository/output/public/ || { log "Failed to copy public files"; exit 1; }
                   cp -r .next/standalone/node_modules ~/project/repository/output/ || { log "Failed to copy node_modules"; exit 1; }
+                  cp ~/project/repository/.env ~/project/repository/output/ || { log "Failed to copy .env"; exit 1; }
 
                   log "Listing contents of output directory:"
                   ls -la ~/project/repository/output/
