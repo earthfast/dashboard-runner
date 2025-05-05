@@ -381,31 +381,70 @@ jobs:
             equal: ["upload", "<< pipeline.parameters.SOURCE_TYPE >>"]
           steps:
             - run:
-                name: Download and Extract from S3
+                name: Download from S3 or IPFS based on URL
                 command: |
-                  aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-                  aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-                  aws configure set default.region $AWS_REGION
-
-                  if [ "<< pipeline.parameters.ENVIRONMENT >>" == "development" ]; then
-                    S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_DEV
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia" ]; then
-                    S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA
-                  elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia-staging" ]; then
-                    S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA_STAGING
+                  # Check if the URL is an IPFS URL
+                  if [[ "<< pipeline.parameters.S3_URL >>" == *"ipfs"* ]] || [[ "<< pipeline.parameters.S3_URL >>" == *"gateway"* ]]; then
+                    echo "Detected IPFS URL, downloading from IPFS gateway"
+                    URL="<< pipeline.parameters.S3_URL >>"
+                    
+                    # Ensure URL has proper protocol
+                    if [[ "$URL" != http* ]]; then
+                      URL="https://$URL"
+                    fi
+                    
+                    echo "Downloading from $URL"
+                    mkdir -p ~/project/repository
+                    
+                    # Download from IPFS gateway
+                    cd ~/project/repository
+                    curl -L "$URL" > ipfs-listing.html
+                    
+                    # Parse and download each file from the directory listing
+                    # This might need adjustment based on your gateway's HTML structure
+                    grep -o 'href="[^"]*"' ipfs-listing.html | sed 's/href="//' | sed 's/"//' | grep -v "^/" | grep -v "^?" | grep -v "^#" | grep -v "^http" | while read -r file; do
+                      if [[ "$file" == */ ]]; then
+                        # It's a directory
+                        mkdir -p "$file"
+                      else
+                        # It's a file
+                        echo "Downloading $file"
+                        curl -L "${URL%/}/$file" -o "$file"
+                      fi
+                    done
+                    
+                    # Clean up the HTML file
+                    rm ipfs-listing.html
+                    
+                    # If nothing was downloaded, try to get the index.html directly
+                    if [ "$(find . -type f | wc -l)" -eq 0 ]; then
+                      echo "Directory listing failed, trying direct download"
+                      curl -L "$URL" -o index.html
+                    fi
                   else
-                    echo "Invalid / default environment specified."
-                    exit 1
+                    # Original S3 download code
+                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                    aws configure set default.region $AWS_REGION
+      
+                    if [ "<< pipeline.parameters.ENVIRONMENT >>" == "development" ]; then
+                      S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_DEV
+                    elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia" ]; then
+                      S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA
+                    elif [ "<< pipeline.parameters.ENVIRONMENT >>" == "testnet-sepolia-staging" ]; then
+                      S3_BUCKET_NAME=$AWS_S3_USER_UPLOADS_BUCKET_NAME_SEPOLIA_STAGING
+                    else
+                      echo "Invalid / default environment specified."
+                      exit 1
+                    fi
+      
+                    S3_PATH="s3://$S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
+                    aws s3 cp $S3_PATH ~/project/repository --recursive
                   fi
-
-                  S3_PATH="s3://$S3_BUCKET_NAME/$(basename "<< pipeline.parameters.S3_URL >>")"
-                  aws s3 cp $S3_PATH ~/project/repository --recursive
-
-                  if [ $(find ~/project/repository -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ] && [ $(find ~/project/repository -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]; then
-                    extracted_folder=$(find ~/project/repository -mindepth 1 -maxdepth 1 -type d)
-                    mv "$extracted_folder"/* ~/project/repository/
-                    rmdir "$extracted_folder"
-                  fi
+                  
+                  # Display what we've downloaded
+                  echo "Contents of repository directory:"
+                  ls -la ~/project/repository/
 
       - when:
           condition:
